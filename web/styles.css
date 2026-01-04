@@ -1,0 +1,259 @@
+:root{
+  /* Theme */
+  --bg-page:#0b0f14;              /* outside/sides */
+  --bg-app:#0e141b;               /* main container */
+  --bg-chat:#0b1118;              /* chat zone */
+  --bg-panel:#0f1722;             /* panels (database stub) */
+
+  --text:#e8eef6;
+  --muted:rgba(232,238,246,0.70);
+
+  --blue:#2aa8ff;
+  --gold:#f5c84b;
+
+  --border2:rgba(255,255,255,0.06);
+
+  --bubble-bot:#121b26;
+  --bubble-bot-border:rgba(255,255,255,0.10);
+
+  --bubble-user:rgba(42,168,255,0.18);
+  --bubble-user-border:rgba(42,168,255,0.30);
+
+  --composer-bg:rgba(255,255,255,0.02);
+  --input-bg:rgba(255,255,255,0.04);
+
+  --shadow: 0 12px 30px rgba(0,0,0,0.45);
+  --radius:18px;
+
+  /* Fonts */
+  --font-ui: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  --font-title: "Times New Roman", Times, serif;
+}
+
+*{ box-sizing:border-box; }
+
+html, body{
+  height:100%;
+}
+
+body{
+  margin:0;
+  font-family: var(--font-ui);
+  color:var(--text);
+  background:
+    radial-gradient(1200px 700px at 30% -10%, rgba(42,168,255,0.12), transparent 55%),
+    radial-gradient(900px 600px at 90% 0%, rgba(245,200,75,0.10), transparent 55%),
+    var(--bg-page);
+}
+
+/* App shell */
+.app{
+  height:100vh;
+  max-width: 980px;
+  margin: 0 auto;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.02), transparent 50%),
+    var(--bg-app);
+  border-left: 1px solid var(--border2);
+  border-right: 1px solid var(--border2);
+  box-shadow: var(--shadow);
+
+  /* Crucial: make app a 2-row grid (header + content) */
+  display:grid;
+  grid-template-rows: auto 1fr;
+  min-height: 0;
+}
+
+/* Header */
+.topbar{
+  padding: 14px 16px 12px;
+  border-bottom: 1px solid var(--border2);
+  display:flex;
+  align-items:flex-end;
+  justify-content:space-between;
+  gap:16px;
+  position:relative;
+}
+
+/* Gold trim */
+.topbar::after{
+  content:"";
+  position:absolute;
+  left:0; right:0; bottom:-1px;
+  height:2px;
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
+  opacity:0.45;
+}
+
+.title{
+  font-size:18px;
+  font-weight:800;
+  letter-spacing:0.3px;
+  font-family: var(--font-title);
+}
+
+.subtitle{
+  font-size:12px;
+  color:var(--muted);
+  margin-top:4px;
+  font-family: var(--font-ui);
+}
+
+/* Tabs */
+.tabs{
+  display:flex;
+  gap:10px;
+  align-items:center;
+}
+
+.tab{
+  border:1px solid var(--border2);
+  background: rgba(255,255,255,0.03);
+  color: var(--text);
+  padding: 10px 12px;
+  border-radius: 14px;
+  cursor:pointer;
+  font-weight:650;
+  letter-spacing:0.2px;
+  font-family: var(--font-title);
+}
+
+.tab:hover{
+  border-color: rgba(42,168,255,0.30);
+}
+
+.tab.active{
+  border-color: rgba(42,168,255,0.45);
+  background: linear-gradient(180deg, rgba(42,168,255,0.18), rgba(255,255,255,0.03));
+  box-shadow: 0 8px 18px rgba(0,0,0,0.25);
+}
+
+/* Main area must be allowed to shrink; otherwise chat pushes composer */
+.main{
+  height:100%;
+  min-height:0;
+}
+
+/* Views: only the active one is shown */
+.view{
+  display:none;
+}
+
+.view.active{
+  /* Crucial: strict 2-row layout so composer stays pinned */
+  display:grid;
+  grid-template-rows: 1fr auto;
+  height:100%;
+  min-height:0; /* allows chat to shrink and scroll */
+}
+
+/* Chat zone */
+.chat{
+  padding: 16px;
+  background: var(--bg-chat);
+
+  /* Crucial: chat scrolls instead of pushing composer */
+  overflow-y:auto;
+  min-height:0;
+
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+
+  font-family: var(--font-ui);
+}
+
+/* Bubbles */
+.bubble{
+  max-width:72%;
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  line-height:1.35;
+  font-size:14px;
+  white-space:pre-wrap;
+  word-wrap:break-word;
+  font-family: var(--font-ui);
+}
+
+.bot{
+  align-self:flex-start;
+  background: var(--bubble-bot);
+  border: 1px solid var(--bubble-bot-border);
+}
+
+.user{
+  align-self:flex-end;
+  background: var(--bubble-user);
+  border: 1px solid var(--bubble-user-border);
+}
+
+/* Composer */
+.composer{
+  display:grid;
+  grid-template-columns: 1fr auto;
+  gap:10px;
+  padding: 12px;
+  border-top: 1px solid var(--border2);
+  background: var(--composer-bg);
+}
+
+.input{
+  padding: 12px 12px;
+  border-radius: 14px;
+  border: 1px solid var(--border2);
+  background: var(--input-bg);
+  color: var(--text);
+  outline:none;
+  font-family: var(--font-ui);
+}
+
+.input:focus{
+  border-color: rgba(42,168,255,0.55);
+  box-shadow: 0 0 0 3px rgba(42,168,255,0.16);
+}
+
+.send{
+  padding: 0 16px;
+  border-radius: 14px;
+  border: 1px solid rgba(245,200,75,0.28);
+  background: linear-gradient(180deg, rgba(245,200,75,0.18), rgba(255,255,255,0.03));
+  color: var(--text);
+  cursor:pointer;
+  font-weight:750;
+  font-family: var(--font-title);
+}
+
+.send:hover{
+  border-color: rgba(245,200,75,0.45);
+  box-shadow: 0 0 0 3px rgba(245,200,75,0.12);
+}
+
+/* Database view */
+#dbView.view.active{
+  /* In Database view we don't need the 2-row chat layout */
+  display:block;
+  height:100%;
+  min-height:0;
+  padding: 16px;
+  background: var(--bg-chat);
+}
+
+.panel{
+  background: var(--bg-panel);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius);
+  padding: 16px;
+}
+
+.panelTitle{
+  font-weight:850;
+  letter-spacing:0.2px;
+  margin-bottom:6px;
+  font-family: var(--font-title);
+}
+
+.panelText{
+  color: var(--muted);
+  line-height:1.5;
+  font-family: var(--font-ui);
+}

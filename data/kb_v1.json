@@ -1,0 +1,64 @@
+{
+  "version": "0.1",
+  "symptoms": [
+    {"code":"FEVER","label":"Fever","category":"GENERAL","weight":2.0,"redFlag":false,
+      "aliases":["fever","high temperature","temperature","temp","feeling hot"]},
+
+    {"code":"SORE_THROAT","label":"Sore throat","category":"RESP","weight":1.3,"redFlag":false,
+      "aliases":["sore throat","throat pain","scratchy throat","pain swallowing"]},
+
+    {"code":"COUGH","label":"Cough","category":"RESP","weight":1.2,"redFlag":false,
+      "aliases":["cough","coughing","dry cough","wet cough","phlegm cough"]},
+
+    {"code":"RUNNY_NOSE","label":"Runny nose","category":"RESP","weight":0.8,"redFlag":false,
+      "aliases":["runny nose","runny nostril","nasal drip","dripping nose"]},
+
+    {"code":"STUFFY_NOSE","label":"Nasal congestion","category":"RESP","weight":0.8,"redFlag":false,
+      "aliases":["stuffy nose","blocked nose","congestion","nasal congestion"]},
+
+    {"code":"HEADACHE","label":"Headache","category":"NEURO","weight":1.4,"redFlag":false,
+      "aliases":["headache","head pain","migraine","pressure in head"]},
+
+    {"code":"NAUSEA","label":"Nausea","category":"GI","weight":1.3,"redFlag":false,
+      "aliases":["nausea","nauseous","feel sick to my stomach","queasy"]},
+
+    {"code":"VOMITING","label":"Vomiting","category":"GI","weight":2.2,"redFlag":false,
+      "aliases":["vomiting","throwing up","puking","threw up"]},
+
+    {"code":"DIARRHEA","label":"Diarrhea","category":"GI","weight":2.0,"redFlag":false,
+      "aliases":["diarrhea","loose stool","watery stool","runs"]},
+
+    {"code":"ABDOMINAL_PAIN","label":"Abdominal pain","category":"GI","weight":2.0,"redFlag":false,
+      "aliases":["stomach pain","abdominal pain","belly pain","cramps","stomach cramps"]},
+
+    {"code":"CHEST_PAIN","label":"Chest pain","category":"CARDIO","weight":5.0,"redFlag":true,
+      "aliases":["chest pain","chest tightness","pressure in chest","pain in chest"]},
+
+    {"code":"SHORTNESS_OF_BREATH","label":"Shortness of breath","category":"RESP","weight":5.0,"redFlag":true,
+      "aliases":["shortness of breath","trouble breathing","hard to breathe","breathless"]},
+
+    {"code":"FAINTING","label":"Fainting","category":"NEURO","weight":5.0,"redFlag":true,
+      "aliases":["fainting","passed out","passing out","blackout"]},
+
+    {"code":"SEVERE_BLEEDING","label":"Severe bleeding","category":"INJURY","weight":5.0,"redFlag":true,
+      "aliases":["severe bleeding","won't stop bleeding","bleeding a lot","heavy bleeding"]},
+
+    {"code":"RASH","label":"Rash","category":"SKIN","weight":1.4,"redFlag":false,
+      "aliases":["rash","hives","red spots","itchy rash"]},
+
+    {"code":"ITCHING","label":"Itching","category":"SKIN","weight":1.0,"redFlag":false,
+      "aliases":["itching","itchy","skin itching"]},
+
+    {"code":"EAR_PAIN","label":"Ear pain","category":"ENT","weight":1.6,"redFlag":false,
+      "aliases":["ear pain","earache","pain in ear"]},
+
+    {"code":"SORE_MUSCLES","label":"Muscle aches","category":"GENERAL","weight":1.1,"redFlag":false,
+      "aliases":["muscle aches","body aches","sore muscles","aches"]},
+
+    {"code":"FATIGUE","label":"Fatigue","category":"GENERAL","weight":1.0,"redFlag":false,
+      "aliases":["fatigue","tired","exhausted","low energy"]},
+
+    {"code":"DIZZINESS","label":"Dizziness","category":"NEURO","weight":1.8,"redFlag":false,
+      "aliases":["dizzy","dizziness","lightheaded","lightheadedness"]}
+  ]
+}

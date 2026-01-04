@@ -1,0 +1,53 @@
+<!--Title: index-->
+<!--Author: Ali Abbas-->
+<!--Description: This file handles the HTML format of the website-->
+<!--Date: Dec 22, 2025-->
+<!--Version: 1.0.0-->
+
+
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Triage Bot</title>
+    <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+<div class="app">
+    <header class="topbar">
+        <div class="brand">
+            <div class="title">Triage Bot</div>
+            <div class="subtitle">Educational triage guidance — not a diagnosis</div>
+        </div>
+
+        <nav class="tabs" aria-label="Primary">
+            <button class="tab active" data-view="chatView">Chat</button>
+            <button class="tab" data-view="dbView">Database</button>
+        </nav>
+    </header>
+
+    <main class="main">
+        <section id="chatView" class="view active">
+            <main id="chat" class="chat"></main>
+
+            <footer class="composer">
+                <input id="msgInput" class="input" placeholder="Type a symptom..." autocomplete="off" />
+                <button id="sendBtn" class="send">Send</button>
+            </footer>
+        </section>
+
+        <section id="dbView" class="view">
+            <div class="panel">
+                <div class="panelTitle">Database</div>
+                <div class="panelText">
+                    Coming soon: search past cases, filter by triage level, view transcripts.
+                </div>
+            </div>
+        </section>
+    </main>
+</div>
+
+<script src="/app.js"></script>
+</body>
+</html>
