@@ -46,6 +46,7 @@ public class ConversationEngine {
         if (!bootId.equals(st.bootSeen) || st.activeCase == null) {
             st.bootSeen = bootId;
             st.activeCase = new Case();
+            System.out.println("[ConversationEngine] New case started for session " + sessionId);
         }
 
         Case c = st.activeCase;
@@ -76,10 +77,18 @@ public class ConversationEngine {
     private String buildReply(Case c, String text) {
         String norm = normalize(text);
         boolean unclear = isUnclear(norm);
+        boolean greeting = isGreeting(norm);
 
         // 1) First message: acknowledge + encourage symptom listing
         if (c.userMessageCount() == 1) {
             String ack = pickAck(c.caseId);
+
+            // If they greeted us, greet back but push toward symptoms
+            if (greeting) {
+                return nextNonRepeating(c, "greet_pushy",
+                        "Hi again! I’m here to help, but I need symptoms to guide you. Describe what you’re feeling (for example: “chest tightness for 90 minutes, moderate”).");
+            }
+
 
             if (unclear) {
                 c.mode = Case.Mode.CLARIFYING;
@@ -374,6 +383,7 @@ public class ConversationEngine {
                     if (codes != null) {
                         for (String code : codes) bumpCandidate(c, code, hit.score);
                         System.out.println("Candidates now (fuzzy): " + c.candidateConfidenceByCode);
+                        System.out.println("[SymptomMatch] Fuzzy token=\"" + token + "\" matched alias=\"" + hit.alias + "\" score=" + hit.score);
 
                     }
                 }
@@ -403,7 +413,10 @@ public class ConversationEngine {
     private static class FuzzyHit {
         String alias;
         double score;
-        FuzzyHit(String alias, double score) { this.alias = alias; this.score = score; }
+        FuzzyHit(String alias, double score) {
+            this.alias = alias;
+            this.score = score;
+        }
     }
 
     private FuzzyHit bestFuzzy(String token, List<String> aliases) {
@@ -463,6 +476,16 @@ public class ConversationEngine {
                 .replaceAll("[^a-z0-9\\s]", " ")
                 .replaceAll("\\s+", " ")
                 .trim();
+    }
+
+    private boolean isGreeting(String norm) {
+        if (norm.isEmpty()) return false;
+        Set<String> greetings = Set.of("hi", "hello", "hey", "hola", "greetings", "good morning", "good evening", "good afternoon");
+        if (greetings.contains(norm)) return true;
+        for (String g : greetings) {
+            if (norm.startsWith(g + " ")) return true;
+        }
+        return false;
     }
 
     private String nextNonRepeating(Case c, String key, String msg) {

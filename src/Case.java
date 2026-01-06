@@ -4,7 +4,7 @@ import java.util.*;
  * Title: Case
  * Author: Ali Abbas
  * Description: One scenario transcript for a server run. Notes never overwrite. Stores
- * symptom candidates and final triage output for the session.
+ *              symptom candidates and final triage output for the session.
  * Date: Jan 19, 2026
  * Version: 1.2.0
  */
@@ -37,7 +37,7 @@ public class Case {
 
     // Phase 1 slots (later used in triage math)
     public String duration = "";         // e.g., "90 minutes", "3 days", "1-2 weeks"
-    public double durationMinutes = -1;   // normalized numeric duration in minutes for scoring
+    public double durationMinutes = -1;   // normalized numeric duration in minutes for ranking
     public String severity = "";         // e.g., "mild", "moderate", "severe"
 
 

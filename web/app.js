@@ -67,4 +67,4 @@ msgInput.addEventListener("keydown", (e) => {
 });
 
 // ---------- First message ----------
-addBubble("Tell me what’s going on, and I’ll ask a few questions to guide you.", "bot");
+addBubble("Hi, I’m Triage Bot. I’m here to help you understand how serious things might be. Tell me what’s going on, and I’ll ask a few questions to guide you.", "bot");
