@@ -3,9 +3,10 @@ import java.util.*;
 /**
  * Title: Case
  * Author: Ali Abbas
- * Description: One scenario transcript for a server run. Notes never overwrite.
- * Date: Dec 23, 2025
- * Version: 1.0.0
+ * Description: One scenario transcript for a server run. Notes never overwrite. Stores
+ * symptom candidates and final triage output for the session.
+ * Date: Jan 19, 2026
+ * Version: 1.2.0
  */
 public class Case {
 
@@ -23,14 +24,22 @@ public class Case {
     // symptom candidates (silent extraction)
     public final Map<String, Double> candidateConfidenceByCode = new HashMap<>();
 
+    // Resolved/locked output
+    public boolean triageComplete = false;                // true once a decision is made
+    public String triageLevel = "";                       // 911, ER, Doctor, Self-care, etc.
+    public double triageConfidence = 0.0;                 // 0..1 summary confidence for the decision
+    public final List<String> triageReasons = new ArrayList<>(); // human-readable reasons for the outcome
+    public final List<String> triageRedFlags = new ArrayList<>(); // red-flag items that triggered escalation
 
     public final List<String> notes = new ArrayList<>();
 
     public boolean locked = false; // Phase 3 will use this
 
     // Phase 1 slots (later used in triage math)
-    public String duration = "";  // e.g., "today", "3-7 days"
-    public String severity = "";  // e.g., "mild", "moderate", "severe"
+    public String duration = "";         // e.g., "90 minutes", "3 days", "1-2 weeks"
+    public double durationMinutes = -1;   // normalized numeric duration in minutes for scoring
+    public String severity = "";         // e.g., "mild", "moderate", "severe"
+
 
     public Mode mode = Mode.OPENING;
 
