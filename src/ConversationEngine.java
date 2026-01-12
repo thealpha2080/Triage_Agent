@@ -289,30 +289,57 @@ public class ConversationEngine {
         return numberText + " " + unitText;
     }
 
-    private double computeDurationFactor(Case c) {
-        double durationFactor = 1.0;
+    private double computeDurationMultiplier(Case c) {
+        double durationMultiplier = 1.0;
 
         if (c.durationMinutes > 0) {
             double minutes = c.durationMinutes;
 
-            if (minutes <= 120) durationFactor = 1.05;
-            else if (minutes <= 1440) durationFactor = 1.10;
-            else if (minutes <= 4320) durationFactor = 1.15;
-            else if (minutes <= 10080) durationFactor = 1.20;
-            else if (minutes <= 20160) durationFactor = 1.25;
-            else durationFactor = 1.30;
+            if (minutes <= 30) durationMultiplier = 1.00;
+            else if (minutes <= 120) durationMultiplier = 1.15;
+            else if (minutes <= 360) durationMultiplier = 1.30;
+            else if (minutes <= 1440) durationMultiplier = 1.45;
+            else if (minutes <= 4320) durationMultiplier = 1.60;
+            else durationMultiplier = 1.75;
 
-            return durationFactor;
+            return durationMultiplier;
         }
 
         String d = c.duration == null ? "" : c.duration.toLowerCase(Locale.ROOT);
-        if (d.contains("today")) durationFactor = 1.10;
-        else if (d.contains("1-2 days") || d.contains("1 2 days") || d.contains("yesterday")) durationFactor = 1.05;
-        else if (d.contains("3-7 days") || d.contains("3 7 days")) durationFactor = 1.15;
-        else if (d.contains("1-2 weeks") || d.contains("1 2 weeks")) durationFactor = 1.20;
-        else if (d.contains("2+ weeks") || d.contains("2 weeks")) durationFactor = 1.25;
+        if (d.contains("today")) durationMultiplier = 1.20;
+        else if (d.contains("1-2 days") || d.contains("1 2 days") || d.contains("yesterday")) durationMultiplier = 1.15;
+        else if (d.contains("3-7 days") || d.contains("3 7 days")) durationMultiplier = 1.30;
+        else if (d.contains("1-2 weeks") || d.contains("1 2 weeks")) durationMultiplier = 1.45;
+        else if (d.contains("2+ weeks") || d.contains("2 weeks")) durationMultiplier = 1.60;
 
-        return durationFactor;
+        return durationMultiplier;
+    }
+
+    private double computeSeverityMultiplier(String severity) {
+        if ("moderate".equals(severity)) return 1.30;
+        if ("severe".equals(severity)) return 1.70;
+        return 1.0;
+    }
+
+    private double computeDurationBoost(Case c) {
+        if (c.durationMinutes <= 0) return 0.0;
+        double minutes = c.durationMinutes;
+        if (minutes >= 1440) return 1.6;
+        if (minutes >= 360) return 1.2;
+        if (minutes >= 120) return 0.8;
+        return 0.0;
+    }
+
+    private double computeSeverityBoost(String severity) {
+        if ("severe".equals(severity)) return 1.2;
+        if ("moderate".equals(severity)) return 0.5;
+        return 0.0;
+    }
+
+    private boolean isProlongedDuration(Case c) {
+        if (c.durationMinutes >= 120) return true;
+        String d = c.duration == null ? "" : c.duration.toLowerCase(Locale.ROOT);
+        return d.contains("day") || d.contains("week") || d.contains("today");
     }
 
     private boolean userSeemsDone(String norm) {
@@ -532,40 +559,51 @@ public class ConversationEngine {
         boolean userReady = userSeemsDone(norm) || c.notes.size() >= 3;
         if (!userReady) return null;
 
-        double severityFactor;
-        switch (c.severity) {
-            case "moderate":
-                severityFactor = 1.15;
-                break;
-            case "severe":
-                severityFactor = 1.35;
-                break;
-            default:
-                severityFactor = 1.0;
-        }
-
-        double durationFactor = computeDurationFactor(c);
+        double severityMultiplier = computeSeverityMultiplier(c.severity);
+        double durationMultiplier = computeDurationMultiplier(c);
+        double severityBoost = computeSeverityBoost(c.severity);
+        double durationBoost = computeDurationBoost(c);
 
         List<String> redFlags = new ArrayList<>();
         List<String> reasons = new ArrayList<>();
-        double score = 0.0;
+        double baseScore = 0.0;
+        boolean hasNosebleed = false;
 
         for (Map.Entry<String, Double> e : c.candidateConfidenceByCode.entrySet()) {
             Symptom s = kb.symptomByCode.get(e.getKey());
             if (s == null) continue;
 
             double confidence = e.getValue();
-            double weighted = s.weight * confidence * severityFactor * durationFactor;
-            score += weighted;
+            double weighted = s.weight * confidence;
+            baseScore += weighted;
 
             System.out.println("[Triage] Scoring symptom code=" + s.code + " label=" + s.label
                     + " weight=" + s.weight + " conf=" + confidence + " weighted=" + weighted);
 
             if (s.redFlag && confidence >= 0.60) {
-                redFlags.add(s.label + " (conf " + String.format(Locale.ROOT, "%.0f%%", confidence * 100) + ")");
+                String reason = s.label + " (conf " + String.format(Locale.ROOT, "%.0f%%", confidence * 100) + ")";
+                redFlags.add(reason);
+                reasons.add(reason);
             } else if (confidence >= 0.40) {
                 reasons.add(s.label + " (conf " + String.format(Locale.ROOT, "%.0f%%", confidence * 100) + ")");
             }
+
+            if ("NOSEBLEED".equals(s.code) && confidence >= 0.50) {
+                hasNosebleed = true;
+            }
+        }
+
+        double score = (baseScore * severityMultiplier * durationMultiplier) + severityBoost + durationBoost;
+        boolean prolongedNosebleed = hasNosebleed && c.durationMinutes >= 120;
+
+        if ("severe".equals(c.severity)) {
+            reasons.add("Reported severity: severe");
+        } else if ("moderate".equals(c.severity)) {
+            reasons.add("Reported severity: moderate");
+        }
+
+        if (isProlongedDuration(c) && c.duration != null && !c.duration.isEmpty()) {
+            reasons.add("Symptoms ongoing for " + c.duration);
         }
 
         String level;
@@ -573,9 +611,13 @@ public class ConversationEngine {
 
         if (!redFlags.isEmpty()) {
             level = "911";
-            confScore = 0.90;
-            reasons.add("flagged life-threatening symptoms");
+            confScore = 0.92;
             System.out.println("[Triage] Red-flag escalation. Red flags: " + redFlags);
+        } else if (prolongedNosebleed) {
+            level = "severe".equals(c.severity) ? "911" : "ER now";
+            confScore = 0.90;
+            reasons.add("Nosebleed lasting 2+ hours");
+            System.out.println("[Triage] Prolonged nosebleed escalation.");
         } else if (score >= 8.0) {
             level = "ER now";
             confScore = Math.min(1.0, 0.70 + score / 15.0);
@@ -609,9 +651,6 @@ public class ConversationEngine {
         sb.append("Triage result: ").append(c.triageLevel.isEmpty() ? "Pending" : c.triageLevel);
         if (c.triageConfidence > 0) {
             sb.append(" (confidence ").append(String.format(Locale.ROOT, "%.0f%%", c.triageConfidence * 100)).append(")");
-        }
-        if (!c.triageRedFlags.isEmpty()) {
-            sb.append("\nRed flags: ").append(String.join(", ", c.triageRedFlags));
         }
         if (!c.triageReasons.isEmpty()) {
             sb.append("\nReasons: ").append(String.join("; ", c.triageReasons));
