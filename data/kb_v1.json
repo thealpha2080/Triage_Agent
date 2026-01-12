@@ -154,6 +154,9 @@
     {"code":"PREGNANCY_BLEEDING","label":"Bleeding during pregnancy","category":"OB","weight":5.0,"redFlag":true,
       "aliases":["bleeding during pregnancy","pregnant and bleeding","bleeding while pregnant"]},
 
+    {"code":"NOSEBLEED","label":"Nosebleed","category":"INJURY","weight":2.4,"redFlag":false,
+      "aliases":["nosebleed","nose bleed","bleeding from nose","blood from nose","nose is bleeding"]},
+
     {"code":"SEVERE_BLEEDING","label":"Severe bleeding","category":"INJURY","weight":5.0,"redFlag":true,
       "aliases":["severe bleeding","won't stop bleeding","bleeding a lot","heavy bleeding","blood loss"]},
 
