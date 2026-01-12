@@ -10,12 +10,9 @@ import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 
 import java.io.*;
-
 import java.net.InetSocketAddress;
-
 import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
-
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
@@ -29,6 +26,7 @@ public class Server {
     private static final Path INDEX_HTML = Path.of("web/index.html");
     private static final Path STYLES_CSS = Path.of("web/styles.css");
     private static final Path APP_JS     = Path.of("web/app.js");
+    private static final Path KB_PATH    = Path.of("data/kb_v1.json");
 
     static final String BOOT_ID = UUID.randomUUID().toString();
     static final Map<String, ConversationState> SESSIONS = new ConcurrentHashMap<>();
@@ -38,8 +36,8 @@ public class Server {
 
 
     public static void main(String[] args) throws IOException {
-        // Make the program run through this PORT doorway
-        // Knock on the door in the browser at "http://localhost:8080/"
+        // Bind the local HTTP server.
+        // Open the UI in the browser at "http://localhost:8000/".
         HttpServer server = HttpServer.create(new InetSocketAddress(PORT), 0);
 
         // Static routes
@@ -53,7 +51,7 @@ public class Server {
 
         server.setExecutor(null); // default executor
 
-        // Save case and ensure the editable one doesn't have triage results (archived)
+        // Save active cases on shutdown so sessions are archived.
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             System.out.println("[Shutdown] Saving active cases...");
             for (ConversationState st : SESSIONS.values()) {
@@ -75,9 +73,8 @@ public class Server {
 
 
     /**
-     * Generic sender: you provide a body object and an encoder to convert it to bytes.
+     * Generic sender: provide a body object and an encoder to convert it to bytes.
      * This prevents duplicated "set headers + send + write + close" code.
-     * An exchange is when an Http request is received and a response is to be generated
      */
     private static <T> void send(HttpExchange exchange,
                                  int statusCode,
@@ -87,12 +84,12 @@ public class Server {
 
         byte[] bytes = encoder.apply(body);
 
-        // Putting on the metadata labels
+        // Set response metadata.
         exchange.getResponseHeaders().set("Content-Type", contentType);
         exchange.getResponseHeaders().set("Cache-Control", "no-store");
 
-        // length needed to know when the request is complete
-        exchange.sendResponseHeaders(statusCode, bytes.length); // (fixed length best in this case)
+        // Fixed-length response body for predictable client behavior.
+        exchange.sendResponseHeaders(statusCode, bytes.length);
         try (OutputStream out = exchange.getResponseBody()) {
             out.write(bytes);
         }
@@ -130,7 +127,7 @@ public class Server {
     private static void handleRoot(HttpExchange exchange) throws IOException {
         System.out.println(method(exchange) + " " + path(exchange));
 
-        // Only serve index on exact "/"
+        // Only serve index on exact "/".
         if (!"GET".equals(method(exchange))) {
             sendText(exchange, 405, "Method Not Allowed");
             return;
@@ -167,7 +164,7 @@ public class Server {
     }
 
     private static void handleFavicon(HttpExchange exchange) throws IOException {
-        // Respond with "No Content" so browsers stop spamming requests.
+        // Respond with "No Content" so browsers stop requesting the favicon.
         if (!"GET".equals(method(exchange))) {
             sendText(exchange, 405, "Method Not Allowed");
             return;
@@ -237,11 +234,10 @@ public class Server {
 
     private static KnowledgeBase loadKbOrDie() {
         try {
-            // Change filename to match yours
-            return KnowledgeBase.load(Path.of("data/kb_v1.json"));
+            return KnowledgeBase.load(KB_PATH);
         } catch (Exception e) {
             System.out.println("FATAL: Could not load knowledge base.");
-            System.out.println("Expected at: data/kb_symptoms.json");
+            System.out.println("Expected at: " + KB_PATH);
             e.printStackTrace();
             System.exit(1);
             return null; // unreachable, but required by Java
@@ -254,11 +250,4 @@ public class Server {
         return new String(bytes, StandardCharsets.UTF_8);
     }
 
-    private static String escapeJson(String s) {
-        // Minimal JSON escaping for quotes/backslashes/newlines
-        return s.replace("\\", "\\\\")
-                .replace("\"", "\\\"")
-                .replace("\n", "\\n")
-                .replace("\r", "\\r");
-    }
 }
