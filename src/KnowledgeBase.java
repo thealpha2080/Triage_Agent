@@ -69,7 +69,11 @@ public class KnowledgeBase {
         if (colon < 0) return fallback;
         int end = findNumberEnd(block, colon + 1);
         String num = block.substring(colon + 1, end).trim().replace(",", "");
-        try { return Double.parseDouble(num); } catch (Exception e) { return fallback; }
+        try {
+            return Double.parseDouble(num);
+        } catch (NumberFormatException e) {
+            return fallback;
+        }
     }
 
     private static boolean getBoolField(String block, String key, boolean fallback) {

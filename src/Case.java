@@ -33,7 +33,7 @@ public class Case {
 
     public final List<String> notes = new ArrayList<>();
 
-    public boolean locked = false; // Phase 3 will use this
+    public boolean locked = false; // Prevent updates after triage is finalized.
 
     // Phase 1 slots (later used in triage math)
     public String duration = "";         // e.g., "90 minutes", "3 days", "1-2 weeks"
@@ -46,7 +46,7 @@ public class Case {
     // Prevent repeating the exact same bot message forever
     public String lastBotKey = "";
 
-    // Track how many times we have asked the user to clarify, so we can stop looping
+    // Track how many times we have asked the user to clarify, so we can stop looping.
     public int unclearCount = 0;
 
     public int userMessageCount() {

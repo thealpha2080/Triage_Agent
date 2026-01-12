@@ -80,7 +80,7 @@ public class ConversationEngine {
     }
 
     // ------------------------------------------------------------
-    // Phase 1 reply
+    // Conversation flow
 
     private BotResponse buildReply(Case c, String text) {
         String norm = normalize(text);
@@ -318,6 +318,9 @@ public class ConversationEngine {
     private boolean userSeemsDone(String norm) {
         return norm.contains("that s it")
                 || norm.contains("thats it")
+                || norm.contains("that is it")
+                || norm.contains("that's it")
+                || norm.contains("that is all")
                 || norm.contains("nothing else")
                 || norm.contains("no more")
                 || norm.equals("done");
@@ -423,6 +426,7 @@ public class ConversationEngine {
 
     private boolean isUnclear(String norm) {
         if (norm.isEmpty()) return true;
+        if (userSeemsDone(norm)) return false;
 
         Set<String> filler = Set.of("idk", "help", "please", "uh", "umm", "yo", "hey");
         if (filler.contains(norm)) return true;
@@ -464,7 +468,7 @@ public class ConversationEngine {
     }
 
     // ------------------------------------------------------------
-    // JSON builder (FIXED: accepts BotResponse)
+    // JSON builder
 
     private String responseJson(BotResponse resp, Case c) {
         StringBuilder sb = new StringBuilder();
@@ -518,7 +522,7 @@ public class ConversationEngine {
     }
 
     // ------------------------------------------------------------
-    // Triage logic (FIXED: returns BotResponse)
+    // Triage logic
 
     private BotResponse maybeTriage(Case c, String norm) {
         if (c.triageComplete) return new BotResponse(triageSummary(c));
