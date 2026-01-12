@@ -2,10 +2,10 @@
   "version": "0.1",
   "symptoms": [
     {"code":"FEVER","label":"Fever","category":"GENERAL","weight":2.0,"redFlag":false,
-      "aliases":["fever","high temperature","temperature","temp","feeling hot"]},
+      "aliases":["fever","high temperature","temperature","temp","feeling hot","feverish","running a fever"]},
 
     {"code":"SORE_THROAT","label":"Sore throat","category":"RESP","weight":1.3,"redFlag":false,
-      "aliases":["sore throat","throat pain","scratchy throat","pain swallowing"]},
+      "aliases":["sore throat","throat pain","scratchy throat","pain swallowing","throat hurts"]},
 
     {"code":"COUGH","label":"Cough","category":"RESP","weight":1.2,"redFlag":false,
       "aliases":["cough","coughing","dry cough","wet cough","phlegm cough"]},
@@ -17,25 +17,25 @@
       "aliases":["stuffy nose","blocked nose","congestion","nasal congestion"]},
 
     {"code":"HEADACHE","label":"Headache","category":"NEURO","weight":1.4,"redFlag":false,
-      "aliases":["headache","head pain","migraine","pressure in head"]},
+      "aliases":["headache","head pain","migraine","pressure in head","head ache"]},
 
     {"code":"NAUSEA","label":"Nausea","category":"GI","weight":1.3,"redFlag":false,
-      "aliases":["nausea","nauseous","feel sick to my stomach","queasy"]},
+      "aliases":["nausea","nauseous","feel sick to my stomach","queasy","sick","sick to my stomach","nauseated"]},
 
     {"code":"VOMITING","label":"Vomiting","category":"GI","weight":2.2,"redFlag":false,
-      "aliases":["vomiting","throwing up","puking","threw up"]},
+      "aliases":["vomiting","throwing up","puking","threw up","throw up"]},
 
     {"code":"DIARRHEA","label":"Diarrhea","category":"GI","weight":2.0,"redFlag":false,
-      "aliases":["diarrhea","loose stool","watery stool","runs"]},
+      "aliases":["diarrhea","loose stool","watery stool","runs","the runs"]},
 
     {"code":"ABDOMINAL_PAIN","label":"Abdominal pain","category":"GI","weight":2.0,"redFlag":false,
       "aliases":["stomach pain","abdominal pain","belly pain","cramps","stomach cramps"]},
 
     {"code":"CHEST_PAIN","label":"Chest pain","category":"CARDIO","weight":5.0,"redFlag":true,
-      "aliases":["chest pain","chest tightness","pressure in chest","pain in chest"]},
+      "aliases":["chest pain","chest tightness","pressure in chest","pain in chest","chest pressure","tight chest"]},
 
     {"code":"SHORTNESS_OF_BREATH","label":"Shortness of breath","category":"RESP","weight":5.0,"redFlag":true,
-      "aliases":["shortness of breath","trouble breathing","hard to breathe","breathless"]},
+      "aliases":["shortness of breath","trouble breathing","hard to breathe","breathless","short of breath","can't breathe","cant breathe"]},
 
     {"code":"FAINTING","label":"Fainting","category":"NEURO","weight":5.0,"redFlag":true,
       "aliases":["fainting","passed out","passing out","blackout"]},
@@ -59,6 +59,6 @@
       "aliases":["fatigue","tired","exhausted","low energy"]},
 
     {"code":"DIZZINESS","label":"Dizziness","category":"NEURO","weight":1.8,"redFlag":false,
-      "aliases":["dizzy","dizziness","lightheaded","lightheadedness"]}
+      "aliases":["dizzy","dizziness","lightheaded","lightheadedness","light headed"]}
   ]
 }

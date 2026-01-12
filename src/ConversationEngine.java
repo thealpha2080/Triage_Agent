@@ -65,18 +65,18 @@ public class ConversationEngine {
 
         // Always record the raw message
         c.notes.add(text);
-        extractAndStoreCandidates(c, text);
+        boolean foundCandidate = extractAndStoreCandidates(c, text);
 
-        String reply = buildReply(c, text);
+        String reply = buildReply(c, text, foundCandidate);
         return botJson(reply);
     }
 
     // ------------------------------------------------------------
     // Phase 1 reply
 
-    private String buildReply(Case c, String text) {
+    private String buildReply(Case c, String text, boolean foundCandidate) {
         String norm = normalize(text);
-        boolean unclear = isUnclear(norm);
+        boolean unclear = isUnclear(norm, foundCandidate);
         boolean greeting = isGreeting(norm);
 
         // 1) First message: acknowledge + encourage symptom listing
@@ -193,10 +193,13 @@ public class ConversationEngine {
     // Slot extraction
 
     private String extractSeverity(String norm) {
-        if (norm.contains("mild")) return "mild";
-        if (norm.contains("moderate")) return "moderate";
-        if (norm.contains("severe")) return "severe";
-        if (norm.contains("really bad")) return "severe";
+        if (norm.contains("mild") || norm.contains("minor") || norm.contains("manageable")) return "mild";
+        if (norm.contains("moderate") || norm.contains("medium")) return "moderate";
+        if (norm.contains("severe") || norm.contains("extreme") || norm.contains("worst")) return "severe";
+        if (norm.contains("really bad") || norm.contains("very bad") || norm.contains("awful") || norm.contains("terrible")) {
+            return "severe";
+        }
+        if (norm.contains("bad")) return "moderate";
         return "";
     }
 
@@ -354,13 +357,14 @@ public class ConversationEngine {
                 || norm.equals("done");
     }
 
-    private void extractAndStoreCandidates(Case c, String rawText) {
+    private boolean extractAndStoreCandidates(Case c, String rawText) {
         String norm = KnowledgeBase.normalize(rawText);
-        if (norm.isEmpty()) return;
+        if (norm.isEmpty()) return false;
 
         List<String> phrases = makeNGrams(norm, 4);
 
         boolean anyExact = false;
+        boolean anyFuzzy = false;
 
         // Pass 1: exact phrase matches
         for (String ph : phrases) {
@@ -373,22 +377,37 @@ public class ConversationEngine {
             }
         }
 
-        // Pass 2: fuzzy token matches (only if no exact)
-        if (!anyExact) {
-            for (String token : norm.split(" ")) {
-                if (token.length() < 3) continue;
-                FuzzyHit hit = bestFuzzy(token, kb.allAliases);
-                if (hit != null && hit.score >= 0.80) {
-                    List<String> codes = kb.codesByAlias.get(hit.alias);
-                    if (codes != null) {
-                        for (String code : codes) bumpCandidate(c, code, hit.score);
-                        System.out.println("Candidates now (fuzzy): " + c.candidateConfidenceByCode);
-                        System.out.println("[SymptomMatch] Fuzzy token=\"" + token + "\" matched alias=\"" + hit.alias + "\" score=" + hit.score);
-
-                    }
+        // Pass 2: fuzzy phrase matches (for misspellings or partials)
+        for (String phrase : phrases) {
+            if (phrase.length() < 4) continue;
+            FuzzyHit hit = bestFuzzy(phrase, kb.allAliases);
+            if (hit != null && hit.score >= 0.75) {
+                List<String> codes = kb.codesByAlias.get(hit.alias);
+                if (codes != null) {
+                    for (String code : codes) bumpCandidate(c, code, hit.score);
+                    anyFuzzy = true;
+                    System.out.println("Candidates now (fuzzy): " + c.candidateConfidenceByCode);
+                    System.out.println("[SymptomMatch] Fuzzy phrase=\"" + phrase + "\" matched alias=\"" + hit.alias + "\" score=" + hit.score);
                 }
             }
         }
+
+        // Pass 3: fuzzy token matches for short inputs
+        for (String token : norm.split(" ")) {
+            if (token.length() < 3) continue;
+            FuzzyHit hit = bestFuzzy(token, kb.allAliases);
+            if (hit != null && hit.score >= 0.72) {
+                List<String> codes = kb.codesByAlias.get(hit.alias);
+                if (codes != null) {
+                    for (String code : codes) bumpCandidate(c, code, hit.score);
+                    anyFuzzy = true;
+                    System.out.println("Candidates now (fuzzy): " + c.candidateConfidenceByCode);
+                    System.out.println("[SymptomMatch] Fuzzy token=\"" + token + "\" matched alias=\"" + hit.alias + "\" score=" + hit.score);
+                }
+            }
+        }
+
+        return anyExact || anyFuzzy;
     }
 
     private void bumpCandidate(Case c, String code, double confidence) {
@@ -457,11 +476,13 @@ public class ConversationEngine {
     // ------------------------------------------------------------
     // Unclear detection (use normalized string)
 
-    private boolean isUnclear(String norm) {
+    private boolean isUnclear(String norm, boolean foundCandidate) {
         if (norm.isEmpty()) return true;
 
         Set<String> filler = Set.of("idk", "help", "please", "uh", "umm", "yo", "hey");
         if (filler.contains(norm)) return true;
+
+        if (foundCandidate || isLikelySlotAnswer(norm)) return false;
 
         String[] parts = norm.split(" ");
         int realWords = 0;
@@ -469,6 +490,10 @@ public class ConversationEngine {
             if (p.length() >= 3) realWords++;
         }
         return realWords < 2;
+    }
+
+    private boolean isLikelySlotAnswer(String norm) {
+        return !extractSeverity(norm).isEmpty() || parseDuration(norm) != null;
     }
 
     private String normalize(String s) {
@@ -557,7 +582,7 @@ public class ConversationEngine {
             score += weighted; // add to the total score
 
             // Red-flag detection: high confidence on a redFlag symptom is enough to escalate
-            if (s.redFlag && confidence >= 0.60) {
+            if (s.redFlag && confidence >= 0.55) {
                 String formatted = s.label + " (conf " + String.format(Locale.ROOT, "%.0f%%", confidence * 100) + ")";
                 redFlags.add(formatted);
             }
