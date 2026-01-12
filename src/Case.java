@@ -6,7 +6,7 @@ import java.util.*;
  * Description: One scenario transcript for a server run. Notes never overwrite. Stores
  *              symptom candidates and final triage output for the session.
  * Date: Jan 19, 2026
- * Version: 1.2.0
+ * Version: 1.3.0
  */
 public class Case {
 
@@ -45,6 +45,9 @@ public class Case {
 
     // Prevent repeating the exact same bot message forever
     public String lastBotKey = "";
+
+    // Track how many times we have asked the user to clarify, so we can stop looping
+    public int unclearCount = 0;
 
     public int userMessageCount() {
         return notes.size();

@@ -2,7 +2,7 @@
   "version": "0.1",
   "symptoms": [
     {"code":"FEVER","label":"Fever","category":"GENERAL","weight":2.0,"redFlag":false,
-      "aliases":["fever","high temperature","temperature","temp","feeling hot"]},
+      "aliases":["fever","high temperature","temperature","temp","feeling hot", "feverish"]},
 
     {"code":"SORE_THROAT","label":"Sore throat","category":"RESP","weight":1.3,"redFlag":false,
       "aliases":["sore throat","throat pain","scratchy throat","pain swallowing"]},
@@ -17,10 +17,10 @@
       "aliases":["stuffy nose","blocked nose","congestion","nasal congestion"]},
 
     {"code":"HEADACHE","label":"Headache","category":"NEURO","weight":1.4,"redFlag":false,
-      "aliases":["headache","head pain","migraine","pressure in head"]},
+      "aliases":["headache","head pain","migraine","pressure in head", "head hurts"]},
 
     {"code":"NAUSEA","label":"Nausea","category":"GI","weight":1.3,"redFlag":false,
-      "aliases":["nausea","nauseous","feel sick to my stomach","queasy"]},
+      "aliases":["nausea","nauseous","feel sick to my stomach","queasy", "sick","sick to my stomach"]},
 
     {"code":"VOMITING","label":"Vomiting","category":"GI","weight":2.2,"redFlag":false,
       "aliases":["vomiting","throwing up","puking","threw up"]},

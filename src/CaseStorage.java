@@ -51,7 +51,7 @@ public class CaseStorage {
         sb.append("\"triageLevel\":\"").append(escape(c.triageLevel)).append("\",");
         sb.append("\"triageConfidence\":").append(String.format(Locale.ROOT, "%.4f", c.triageConfidence)).append(",");
 
-        // Reasons list
+        // Reasons list (constructing the final report)
         sb.append("\"triageReasons\":[");
         for (int i = 0; i < c.triageReasons.size(); i++) {
             if (i > 0) sb.append(",");
