@@ -15,6 +15,12 @@ public class ConversationEngine {
             "Okay. Let’s walk through it step by step.",
             "Thanks. I’ll keep it simple and ask one thing at a time."
     );
+    private static final Set<String> DURATION_CONTEXT = Set.of(
+            "for", "since", "past", "last", "lasting", "started", "been"
+    );
+    private static final Set<String> CORRECTION_TOKENS = Set.of(
+            "actually", "just", "only"
+    );
 
     private final Map<String, ConversationState> sessions;
     private final String bootId;
@@ -84,7 +90,14 @@ public class ConversationEngine {
 
     private BotResponse buildReply(Case c, String text) {
         String norm = normalize(text);
+        DurationParseResult durationAttempt = parseDuration(norm);
+        String severityAttempt = extractSeverity(norm);
+        boolean respondingToDuration = "ask_duration".equals(c.lastBotKey) && durationAttempt != null;
+        boolean respondingToSeverity = "ask_severity".equals(c.lastBotKey) && !severityAttempt.isEmpty();
         boolean unclear = isUnclear(norm);
+        if (respondingToDuration || respondingToSeverity) {
+            unclear = false;
+        }
         boolean greeting = isGreeting(norm);
 
         // 1) First message: acknowledge + encourage symptom listing
@@ -192,16 +205,14 @@ public class ConversationEngine {
     }
 
     private void fillSlotsFromText(Case c, String norm) {
-        if (c.duration.isEmpty()) {
-            // Try to parse any written duration (minutes/hours/days/weeks) so the user has flexibility
-            DurationParseResult parsed = parseDuration(norm);
-            if (parsed != null) {
-                c.duration = parsed.label;
-                c.durationMinutes = parsed.minutes;
-            }
+        DurationParseResult parsed = parseDuration(norm);
+        if (parsed != null && shouldUpdateDuration(c, parsed, norm)) {
+            c.duration = parsed.label;
+            c.durationMinutes = parsed.minutes;
         }
-        if (c.severity.isEmpty()) {
-            c.severity = extractSeverity(norm);
+        String severity = extractSeverity(norm);
+        if (!severity.isEmpty() && shouldUpdateSeverity(c, norm)) {
+            c.severity = severity;
         }
     }
 
@@ -227,6 +238,18 @@ public class ConversationEngine {
         }
         if (norm.contains("few hours")) {
             return new DurationParseResult("few hours (~180)", 180);
+        }
+        if (norm.contains("few days")) {
+            return new DurationParseResult("few days (~3)", 3 * 60 * 24);
+        }
+        if (norm.contains("few weeks")) {
+            return new DurationParseResult("few weeks (~3)", 3 * 60 * 24 * 7);
+        }
+        if (norm.contains("past week") || norm.contains("last week")) {
+            return new DurationParseResult("1 week", 7 * 60 * 24);
+        }
+        if (norm.contains("past day") || norm.contains("last day")) {
+            return new DurationParseResult("1 day", 60 * 24);
         }
         if (norm.contains("half hour") || norm.contains("half an hour")) {
             return new DurationParseResult("30 minutes", 30);
@@ -287,6 +310,38 @@ public class ConversationEngine {
 
         String unitText = (Math.abs(value) == 1.0) ? unit : unit + "s";
         return numberText + " " + unitText;
+    }
+
+    private boolean shouldUpdateDuration(Case c, DurationParseResult parsed, String norm) {
+        boolean askedDuration = "ask_duration".equals(c.lastBotKey);
+        boolean hasContext = containsAnyToken(norm, DURATION_CONTEXT);
+        boolean hasCorrection = containsAnyToken(norm, CORRECTION_TOKENS);
+
+        if (c.duration.isEmpty()) {
+            return askedDuration || hasContext || parsed.minutes > 0;
+        }
+
+        if (askedDuration) return true;
+        if (parsed.minutes <= 0) return false;
+        if (hasCorrection) return true;
+        if (!hasContext) return false;
+        if (c.durationMinutes <= 0) return true;
+        return parsed.minutes >= c.durationMinutes;
+    }
+
+    private boolean shouldUpdateSeverity(Case c, String norm) {
+        if (c.severity.isEmpty()) return true;
+        if ("ask_severity".equals(c.lastBotKey)) return true;
+        return containsAnyToken(norm, CORRECTION_TOKENS);
+    }
+
+    private boolean containsAnyToken(String norm, Set<String> tokens) {
+        if (norm.isEmpty()) return false;
+        String[] parts = norm.split(" ");
+        for (String part : parts) {
+            if (tokens.contains(part)) return true;
+        }
+        return false;
     }
 
     private double computeDurationMultiplier(Case c) {
