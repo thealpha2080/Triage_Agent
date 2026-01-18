@@ -3,8 +3,9 @@ import java.util.*;
 /**
  * Title: ConversationEngine
  * Author: Ali Abbas
- * Description: Phase 1 chat UX with slot collection and deterministic replies.
- *              Adds triage scoring with red-flag overrides and summary output.
+ * Description: Phase 1 chat flow that collects basics (duration + severity),
+ *              asks clarifying questions, and then produces a triage summary.
+ *              It also tracks red-flag symptoms to safely upgrade urgency.
  * Date: Jan 19, 2026
  * Version: 1.2.0
  */
@@ -148,7 +149,8 @@ public class ConversationEngine {
                     + "- Duration: " + c.duration + "\n"
                     + "- Severity: " + c.severity + "\n"
                     + "- Notes count: " + c.notes.size() + "\n\n"
-                    + "Next phase will detect symptoms from the notes. If you want, add one more detail (age group, fever temperature, or meds taken).";
+                    + "Next phase will summarize detected symptoms and explain the recommendation. "
+                    + "If you want, add one more detail (age group, fever temperature, or meds taken).";
         }
 
         return nextNonRepeating(c, "collect_more",
