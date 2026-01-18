@@ -25,6 +25,7 @@ public class ConversationEngine {
     private final Map<String, ConversationState> sessions;
     private final String bootId;
     private final KnowledgeBase kb;
+    private final CaseRepository repository;
 
     /**
      * Helper structure to keep both a user-friendly duration label and a numeric value in minutes.
@@ -39,10 +40,11 @@ public class ConversationEngine {
         }
     }
 
-    public ConversationEngine(Map<String, ConversationState> sessions, String bootId, KnowledgeBase kb) {
+    public ConversationEngine(Map<String, ConversationState> sessions, String bootId, KnowledgeBase kb, CaseRepository repository) {
         this.sessions = sessions;
         this.bootId = bootId;
         this.kb = kb;
+        this.repository = repository;
     }
 
     public static class BotResponse {
@@ -57,6 +59,9 @@ public class ConversationEngine {
 
         // New server run => new case, even if browser keeps same sessionId
         if (!bootId.equals(st.bootSeen) || st.activeCase == null) {
+            if (st.activeCase != null && !st.activeCase.notes.isEmpty()) {
+                persistCase(st.activeCase, sessionId);
+            }
             st.bootSeen = bootId;
             st.activeCase = new Case();
             System.out.println("[ConversationEngine] New case started for session " + sessionId);
@@ -66,15 +71,15 @@ public class ConversationEngine {
 
         text = (text == null) ? "" : text.trim();
         if (text.isEmpty()) {
-            return responseJson(new BotResponse(
+            return respond(new BotResponse(
                     "Type what’s going on (you can list symptoms like: “fever, cough, sore throat”)."
-            ), c);
+            ), c, sessionId);
         }
 
         if (c.locked) {
             // When a case is locked, immediately return the existing summary so the user
             // understands the final recommendation without confusion.
-            return responseJson(new BotResponse(triageSummary(c)), c);
+            return respond(new BotResponse(triageSummary(c)), c, sessionId);
         }
 
         // Always record the raw message
@@ -82,7 +87,7 @@ public class ConversationEngine {
         extractAndStoreCandidates(c, text);
 
         BotResponse reply = buildReply(c, text);
-        return responseJson(reply, c);
+        return respond(reply, c, sessionId);
     }
 
     // ------------------------------------------------------------
@@ -593,6 +598,21 @@ public class ConversationEngine {
 
         sb.append("}");
         return sb.toString();
+    }
+
+    private String respond(BotResponse resp, Case c, String sessionId) {
+        persistCase(c, sessionId);
+        return responseJson(resp, c);
+    }
+
+    private void persistCase(Case c, String sessionId) {
+        if (repository == null || c == null) {
+            return;
+        }
+        if (c.notes.isEmpty()) {
+            return;
+        }
+        repository.saveCase(c, sessionId);
     }
 
     private String escapeJson(String s) {

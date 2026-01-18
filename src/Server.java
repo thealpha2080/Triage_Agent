@@ -27,12 +27,14 @@ public class Server {
     private static final Path STYLES_CSS = Path.of("web/styles.css");
     private static final Path APP_JS     = Path.of("web/app.js");
     private static final Path KB_PATH    = Path.of("data/kb_v1.json");
+    private static final Path DB_PATH    = Path.of("data/triage_history.db");
 
     static final String BOOT_ID = UUID.randomUUID().toString();
     static final Map<String, ConversationState> SESSIONS = new ConcurrentHashMap<>();
 
     static final KnowledgeBase KB = loadKbOrDie();
-    private static final ConversationEngine ENGINE = new ConversationEngine(SESSIONS, BOOT_ID, KB);
+    private static final CaseRepository CASE_REPOSITORY = initRepository();
+    private static final ConversationEngine ENGINE = new ConversationEngine(SESSIONS, BOOT_ID, KB, CASE_REPOSITORY);
 
 
     public static void main(String[] args) throws IOException {
@@ -48,6 +50,7 @@ public class Server {
 
         // API routes
         server.createContext("/api/message", Server::handleApiMessage);
+        server.createContext("/api/cases", Server::handleApiCases);
 
         server.setExecutor(null); // default executor
 
@@ -56,7 +59,7 @@ public class Server {
             System.out.println("[Shutdown] Saving active cases...");
             for (ConversationState st : SESSIONS.values()) {
                 if (st != null && st.activeCase != null && !st.activeCase.notes.isEmpty()) {
-                    CaseStorage.saveCase(st.activeCase, st.sessionId);
+                    CASE_REPOSITORY.saveCase(st.activeCase, st.sessionId);
                 }
             }
         }));
@@ -187,6 +190,15 @@ public class Server {
 
     }
 
+    private static void handleApiCases(HttpExchange exchange) throws IOException {
+        if (!"GET".equals(method(exchange))) {
+            sendText(exchange, 405, "Method Not Allowed");
+            return;
+        }
+        List<CaseSummary> summaries = CASE_REPOSITORY.listCases(50);
+        sendJson(exchange, 200, summariesToJson(summaries));
+    }
+
     // ================================================================================================
     // Utilities
 
@@ -230,6 +242,46 @@ public class Server {
             String sub = body.substring(braceStart, braceEnd + 1);
             return getString(sub, key);
         }
+    }
+
+    private static CaseRepository initRepository() {
+        try {
+            System.out.println("[Persistence] Initializing SQLite storage at " + DB_PATH);
+            return new SqliteCaseRepository(DB_PATH);
+        } catch (Exception e) {
+            System.out.println("[Persistence] Falling back to JSON storage: " + e.getMessage());
+            return new JsonCaseRepository();
+        }
+    }
+
+    private static String summariesToJson(List<CaseSummary> summaries) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("[");
+        for (int i = 0; i < summaries.size(); i++) {
+            if (i > 0) sb.append(",");
+            CaseSummary s = summaries.get(i);
+            sb.append("{");
+            sb.append("\"caseId\":\"").append(escapeJson(s.caseId)).append("\",");
+            sb.append("\"sessionId\":\"").append(escapeJson(s.sessionId)).append("\",");
+            sb.append("\"startedEpochMs\":").append(s.startedEpochMs).append(",");
+            sb.append("\"triageLevel\":\"").append(escapeJson(s.triageLevel)).append("\",");
+            sb.append("\"triageConfidence\":").append(String.format(Locale.ROOT, "%.4f", s.triageConfidence)).append(",");
+            sb.append("\"duration\":\"").append(escapeJson(s.duration)).append("\",");
+            sb.append("\"severity\":\"").append(escapeJson(s.severity)).append("\",");
+            sb.append("\"notesCount\":").append(s.notesCount).append(",");
+            sb.append("\"redFlagCount\":").append(s.redFlagCount);
+            sb.append("}");
+        }
+        sb.append("]");
+        return sb.toString();
+    }
+
+    private static String escapeJson(String s) {
+        if (s == null) return "";
+        return s.replace("\\", "\\\\")
+                .replace("\"", "\\\"")
+                .replace("\n", "\\n")
+                .replace("\r", "\\r");
     }
 
     private static KnowledgeBase loadKbOrDie() {
