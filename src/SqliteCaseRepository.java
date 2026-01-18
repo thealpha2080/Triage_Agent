@@ -151,7 +151,6 @@ public class SqliteCaseRepository implements CaseRepository {
             Class.forName("org.sqlite.JDBC");
         } catch (ClassNotFoundException e) {
             throw new IllegalStateException("SQLite JDBC driver not found.", e);
-            System.out.println("[SqliteCaseRepository] Failed to initialize schema: " + e.getMessage());
         }
     }
 

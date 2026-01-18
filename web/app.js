@@ -16,7 +16,8 @@ const tabButtons = document.querySelectorAll(".tab");
 const views = document.querySelectorAll(".view");
 
 // ---------- Session ----------
-const sessionId = localStorage.getItem("sessionId") || crypto.randomUUID();
+// Keep sessionId mutable so resetCase can start a brand-new session.
+let sessionId = localStorage.getItem("sessionId") || crypto.randomUUID();
 localStorage.setItem("sessionId", sessionId);
 
 // ---------- View switching ----------
@@ -159,6 +160,7 @@ function resetCase() {
   chat.innerHTML = "";
   // New session id
   const newId = crypto.randomUUID();
+  sessionId = newId;
   localStorage.setItem("sessionId", newId);
   // Fresh intro
   addBubble("New case started. Tell me what’s going on (symptoms, duration, severity).", "bot");
