@@ -73,7 +73,7 @@ public class TestSuite {
     private static void runScenario(KnowledgeBase kb, String name, List<String> inputs, String expectedLevel) {
         String sessionId = "test-" + UUID.randomUUID();
         Map<String, ConversationState> sessions = new HashMap<>();
-        ConversationEngine engine = new ConversationEngine(sessions, "boot-test", kb);
+        ConversationEngine engine = new ConversationEngine(sessions, "boot-test", kb, new JsonCaseRepository());
 
         String lastResponse = "";
         for (String input : inputs) {

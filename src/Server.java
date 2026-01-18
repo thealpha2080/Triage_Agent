@@ -27,12 +27,14 @@ public class Server {
     private static final Path STYLES_CSS = Path.of("web/styles.css");
     private static final Path APP_JS     = Path.of("web/app.js");
     private static final Path KB_PATH    = Path.of("data/kb_v1.json");
+    private static final Path DB_PATH    = Path.of("data/triage_history.db");
 
     static final String BOOT_ID = UUID.randomUUID().toString();
     static final Map<String, ConversationState> SESSIONS = new ConcurrentHashMap<>();
 
     static final KnowledgeBase KB = loadKbOrDie();
-    private static final ConversationEngine ENGINE = new ConversationEngine(SESSIONS, BOOT_ID, KB);
+    private static final CaseRepository CASE_REPOSITORY = initRepository();
+    private static final ConversationEngine ENGINE = new ConversationEngine(SESSIONS, BOOT_ID, KB, CASE_REPOSITORY);
 
 
     public static void main(String[] args) throws IOException {
@@ -56,7 +58,7 @@ public class Server {
             System.out.println("[Shutdown] Saving active cases...");
             for (ConversationState st : SESSIONS.values()) {
                 if (st != null && st.activeCase != null && !st.activeCase.notes.isEmpty()) {
-                    CaseStorage.saveCase(st.activeCase, st.sessionId);
+                    CASE_REPOSITORY.saveCase(st.activeCase, st.sessionId);
                 }
             }
         }));
@@ -229,6 +231,16 @@ public class Server {
 
             String sub = body.substring(braceStart, braceEnd + 1);
             return getString(sub, key);
+        }
+    }
+
+    private static CaseRepository initRepository() {
+        try {
+            System.out.println("[Persistence] Initializing SQLite storage at " + DB_PATH);
+            return new SqliteCaseRepository(DB_PATH);
+        } catch (Exception e) {
+            System.out.println("[Persistence] Falling back to JSON storage: " + e.getMessage());
+            return new JsonCaseRepository();
         }
     }
 
