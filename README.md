@@ -1,6 +1,6 @@
 # Triage Agent
 
-Triage Agent is a bot that responds to users' self-described symptoms and then outputs a general response that clarifies if the user needs over-the-counter medicine, a doctor, or an emergency room. The bot takes input, tokenizes it, and scans for flag words like "shortness of breath," even if misspelled. The idea is to feel like an LLM, but it runs locally with no keys or verification.
+Triage Agent is a bot that responds to users' self-described symptoms and then outputs a general response that clarifies if the user needs over-the-counter medicine, a doctor, or an emergency room. The bot takes input, tokenizes it, and scans for flag words like "shortness of breath," even if misspelled. The idea is to feel like an LLM (i.e. ChatGPT, Gemini, Copilot, etc), but it runs locally with no keys or verification.
 
 ## Safety note
 
@@ -16,11 +16,10 @@ The bot can also be considered as a health tracker to provide a summary of the u
 - Frontend: HTML/CSS/JS chat UI running in a browser.
 - Backend: Java server running on the client side.
 - Data: local JSON/CSV saves, which include symptoms, rules, logins, and other info.
+        - Implemented SQLite for a true database due to time constraints.
 
 ### Chat UI
 - Chat bubbles.
-- Quick-reply buttons for clarification.
-- "Detected Symptoms" chips or dropdown, which the user can remove/add.
 - Result card (triage and reasons along with next steps).
 
 ### Clarifying questions engine
@@ -40,20 +39,20 @@ The bot can also be considered as a health tracker to provide a summary of the u
   - Can search by keyword/symptom.
   - Sort by date/urgency/confidence.
 
-## Project phases (simple, student-friendly wording)
+## Project phases 
 
-**Phase 1 (what is currently implemented):**
+**Phase 1:**
 - Collect basic info like duration and severity.
 - Ask clarifying questions when the message is vague.
 - Summarize the triage result at the end so the user can see the decision.
 
-**Phase 2 (planned next):**
+**Phase 2:**
 - Show a clean list of detected symptoms inside the UI.
 - Explain *why* the triage decision happened, using short reasons a user can read.
 
-**Phase 3 (planned after Phase 2):**
+**Phase 3:**
 - Add a history view so users can review past cases.
 - Allow simple searching and filtering of those saved cases.
 
-**Phase 4 (stretch/advanced):**
+**Phase 4:**
 - Add stronger storage options (like a database) so history is reliable and fast.
