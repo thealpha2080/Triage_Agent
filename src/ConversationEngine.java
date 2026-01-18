@@ -59,6 +59,9 @@ public class ConversationEngine {
 
         // New server run => new case, even if browser keeps same sessionId
         if (!bootId.equals(st.bootSeen) || st.activeCase == null) {
+            if (st.activeCase != null && !st.activeCase.notes.isEmpty()) {
+                persistCase(st.activeCase, sessionId);
+            }
             st.bootSeen = bootId;
             st.activeCase = new Case();
             System.out.println("[ConversationEngine] New case started for session " + sessionId);

@@ -1,7 +1,15 @@
+// Title: app.js
+// Author: Ali Abbas
+// Description: Client-side logic for chat and database tab rendering.
+// Date: Sep 28, 2025
+// Version: 1.1.0
+
 // ---------- DOM ----------
 const chat = document.getElementById("chat");
 const msgInput = document.getElementById("msgInput");
 const sendBtn = document.getElementById("sendBtn");
+const caseRows = document.getElementById("caseRows");
+const caseEmpty = document.getElementById("caseEmpty");
 
 // Tabs / views
 const tabButtons = document.querySelectorAll(".tab");
@@ -15,6 +23,9 @@ localStorage.setItem("sessionId", sessionId);
 function setActiveView(viewId) {
   views.forEach(v => v.classList.toggle("active", v.id === viewId));
   tabButtons.forEach(b => b.classList.toggle("active", b.dataset.view === viewId));
+  if (viewId === "dbView") {
+    loadCases();
+  }
 }
 
 tabButtons.forEach(btn => {
@@ -74,6 +85,61 @@ msgInput.addEventListener("keydown", (e) => {
 
 // ---------- First message ----------
 addBubble("Hi, I’m Triage Bot. I’m here to help you understand how serious things might be. Tell me what’s going on, and I’ll ask a few questions to guide you.", "bot");
+
+// ---------- Database view ----------
+async function loadCases() {
+  if (!caseRows) return;
+  caseRows.innerHTML = "";
+  caseEmpty.style.display = "none";
+
+  try {
+    // Fetch the latest summaries for the Database tab.
+    const res = await fetch("/api/cases");
+    if (!res.ok) {
+      caseEmpty.textContent = `Failed to load cases (${res.status}).`;
+      caseEmpty.style.display = "block";
+      return;
+    }
+    const data = await res.json();
+    if (!Array.isArray(data) || data.length === 0) {
+      caseEmpty.textContent = "No cases saved yet.";
+      caseEmpty.style.display = "block";
+      return;
+    }
+    data.forEach(caseItem => renderCaseRow(caseItem));
+  } catch (err) {
+    caseEmpty.textContent = "Failed to load cases. Is the Java server running?";
+    caseEmpty.style.display = "block";
+  }
+}
+
+function renderCaseRow(item) {
+  const row = document.createElement("div");
+  row.className = "case-row";
+
+  const started = formatDate(item.startedEpochMs);
+  row.appendChild(makeCell(started));
+  row.appendChild(makeCell(item.triageLevel || "—"));
+  row.appendChild(makeCell(item.severity || "—"));
+  row.appendChild(makeCell(item.duration || "—"));
+  row.appendChild(makeCell(String(item.notesCount ?? 0)));
+  row.appendChild(makeCell(String(item.redFlagCount ?? 0)));
+
+  caseRows.appendChild(row);
+}
+
+function makeCell(text) {
+  const div = document.createElement("div");
+  div.textContent = text;
+  return div;
+}
+
+function formatDate(epochMs) {
+  if (!epochMs) return "—";
+  const date = new Date(Number(epochMs));
+  if (Number.isNaN(date.getTime())) return "—";
+  return date.toLocaleString();
+}
 
 // ---------- Reset handling ----------
 function showResetButton() {

@@ -41,7 +41,19 @@
             <div class="panel">
                 <div class="panelTitle">Database</div>
                 <div class="panelText">
-                    Coming soon: search past cases, filter by triage level, view transcripts.
+                    Recent cases stored on this device.
+                </div>
+                <div class="case-table">
+                    <div class="case-row case-header">
+                        <div>Started</div>
+                        <div>Triage</div>
+                        <div>Severity</div>
+                        <div>Duration</div>
+                        <div>Notes</div>
+                        <div>Red Flags</div>
+                    </div>
+                    <div id="caseRows" class="case-rows"></div>
+                    <div id="caseEmpty" class="case-empty">No cases saved yet.</div>
                 </div>
             </div>
         </section>

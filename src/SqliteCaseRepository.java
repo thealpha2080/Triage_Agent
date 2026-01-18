@@ -9,11 +9,20 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
+/**
+ * Title: SqliteCaseRepository
+ * Author: Ali Abbas
+ * Description: SQLite-backed repository for durable case storage and listings.
+ * Date: Sep 28, 2025
+ * Version: 1.0.0
+ */
 public class SqliteCaseRepository implements CaseRepository {
 
     private final String dbUrl;
 
     public SqliteCaseRepository(Path dbPath) {
+        // Ensure the driver is available before any connection attempts.
+        ensureDriver();
         this.dbUrl = "jdbc:sqlite:" + dbPath.toString();
         ensureDirectory(dbPath);
         ensureSchema();
@@ -68,6 +77,38 @@ public class SqliteCaseRepository implements CaseRepository {
         }
     }
 
+    @Override
+    public List<CaseSummary> listCases(int limit) {
+        List<CaseSummary> summaries = new java.util.ArrayList<>();
+        // Query only the fields required for the database list view.
+        String sql = "SELECT case_id, session_id, started_epoch_ms, triage_level, triage_confidence, " +
+                "duration, severity, notes_json, triage_red_flags_json " +
+                "FROM cases ORDER BY started_epoch_ms DESC LIMIT ?";
+        try (Connection conn = DriverManager.getConnection(dbUrl);
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, limit);
+            try (java.sql.ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    String caseId = rs.getString("case_id");
+                    String sessionId = rs.getString("session_id");
+                    long startedEpochMs = rs.getLong("started_epoch_ms");
+                    String triageLevel = rs.getString("triage_level");
+                    double triageConfidence = rs.getDouble("triage_confidence");
+                    String duration = rs.getString("duration");
+                    String severity = rs.getString("severity");
+                    String notesJson = rs.getString("notes_json");
+                    String redFlagsJson = rs.getString("triage_red_flags_json");
+                    int notesCount = countArrayItems(notesJson);
+                    int redFlagCount = countArrayItems(redFlagsJson);
+                    summaries.add(new CaseSummary(caseId, sessionId, startedEpochMs, triageLevel, triageConfidence, duration, severity, notesCount, redFlagCount));
+                }
+            }
+        } catch (SQLException e) {
+            System.out.println("[SqliteCaseRepository] Failed to list cases: " + e.getMessage());
+        }
+        return summaries;
+    }
+
     private void ensureDirectory(Path dbPath) {
         try {
             Path parent = dbPath.getParent();
@@ -101,6 +142,15 @@ public class SqliteCaseRepository implements CaseRepository {
              Statement stmt = conn.createStatement()) {
             stmt.execute(ddl);
         } catch (SQLException e) {
+            throw new IllegalStateException("Failed to initialize schema: " + e.getMessage(), e);
+        }
+    }
+
+    private void ensureDriver() {
+        try {
+            Class.forName("org.sqlite.JDBC");
+        } catch (ClassNotFoundException e) {
+            throw new IllegalStateException("SQLite JDBC driver not found.", e);
             System.out.println("[SqliteCaseRepository] Failed to initialize schema: " + e.getMessage());
         }
     }
@@ -127,6 +177,33 @@ public class SqliteCaseRepository implements CaseRepository {
         }
         sb.append("}");
         return sb.toString();
+    }
+
+    private int countArrayItems(String jsonArray) {
+        if (jsonArray == null || jsonArray.isBlank()) {
+            return 0;
+        }
+        int count = 0;
+        boolean inString = false;
+        boolean escape = false;
+        for (int i = 0; i < jsonArray.length(); i++) {
+            char c = jsonArray.charAt(i);
+            if (escape) {
+                escape = false;
+                continue;
+            }
+            if (c == '\\') {
+                escape = true;
+                continue;
+            }
+            if (c == '"') {
+                inString = !inString;
+                if (!inString) {
+                    count++;
+                }
+            }
+        }
+        return count;
     }
 
     private String escapeJson(String s) {
