@@ -1,3 +1,9 @@
+/* Title: styles.css */
+/* Author: Ali Abbas */
+/* Description: Core styling for chat UI and database view. */
+/* Date: Sep 28, 2025 */
+/* Version: 1.1.0 */
+
 :root{
   /* Theme */
   --bg-page:#0b0f14;              /* outside/sides */
@@ -243,9 +249,11 @@ body{
   border: 1px solid var(--border2);
   border-radius: var(--radius);
   padding: 16px;
+  box-shadow: var(--shadow);
 }
 
 .panelTitle{
+  font-size:16px;
   font-weight:850;
   letter-spacing:0.2px;
   margin-bottom:6px;
@@ -254,8 +262,47 @@ body{
 
 .panelText{
   color: var(--muted);
+  font-size:13px;
   line-height:1.5;
+  margin-bottom:14px;
   font-family: var(--font-ui);
+}
+
+.case-table{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+
+.case-row{
+  display:grid;
+  grid-template-columns: 1.6fr 1fr 0.9fr 1.2fr 0.6fr 0.8fr;
+  gap:12px;
+  padding: 10px 12px;
+  background: rgba(255,255,255,0.02);
+  border: 1px solid var(--border2);
+  border-radius: 12px;
+  font-size:12px;
+}
+
+.case-header{
+  font-size:12px;
+  text-transform:uppercase;
+  letter-spacing:0.6px;
+  color: var(--muted);
+  background: rgba(255,255,255,0.04);
+}
+
+.case-rows{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+
+.case-empty{
+  color: var(--muted);
+  font-size:12px;
+  padding: 8px 4px 0;
 }
 
 /* Options and badges */
