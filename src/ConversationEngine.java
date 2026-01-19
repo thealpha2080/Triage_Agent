@@ -1,57 +1,83 @@
-import java.util.*;
-
 /**
  * Title: ConversationEngine
  * Author: Ali Abbas
- * Description: Phase 1 chat flow that collects basics (duration + severity),
- *              asks clarifying questions, and then produces a triage summary.
- *              It also tracks red-flag symptoms to safely upgrade urgency.
+ * Description: Chat UX with info collection and deterministic replies.
+ *              Adds triage scoring with red-flag overrides and summary output.
  * Date: Jan 19, 2026
- * Version: 1.2.0
+ * Version: 1.5.0
  */
+
+import java.util.*;
 public class ConversationEngine {
 
+    // brute, manually made freindly chat promps for user experience
+    // ACK = acknowledgement
     private static final List<String> ACKS = List.of(
             "Got it — I can help you sort this out.",
             "Okay. Let’s walk through it step by step.",
             "Thanks. I’ll keep it simple and ask one thing at a time."
     );
+    // Tokens that often indicate the user is describing time context
+    private static final Set<String> DURATION_CONTEXT = Set.of(
+            "for", "since", "past", "last", "lasting", "started", "been"
+    );
+    // Tokens that often indicate the user is correcting themselves
+    private static final Set<String> CORRECTION_TOKENS = Set.of(
+            "actually", "just", "only"
+    );
 
+    // Active sessions map: sessionId -> ConversationState
     private final Map<String, ConversationState> sessions;
+    // Unique id for this server run. If it changes, we force a new Case even if sessionId stayed the same.
     private final String bootId;
+    // Symptom alias/codes + symptom metadata used for extraction + scoring.
     private final KnowledgeBase kb;
+    // Persistence layer to store cases across requests (optional; can be null).
+    private final CaseRepository repository;
 
-    /**
-     * Helper structure to keep both a user-friendly duration label and a numeric value in minutes.
-     * This lets us display the text they typed while still scoring consistently.
-     */
+    // Small helper object: store both a display label and a numeric value (minutes) for duration.
     private static class DurationParseResult {
         String label;
         double minutes;
         DurationParseResult(String label, double minutes) {
-            this.label = label;
-            this.minutes = minutes;
+            this.label = label; // label for display
+            this.minutes = minutes; // normalized numeric duration used in scoring / thresholds
         }
     }
-
-    public ConversationEngine(Map<String, ConversationState> sessions, String bootId, KnowledgeBase kb) {
+    // constructor
+    public ConversationEngine(Map<String, ConversationState> sessions, String bootId, KnowledgeBase kb, CaseRepository repository) {
         this.sessions = sessions;
         this.bootId = bootId;
         this.kb = kb;
+        this.repository = repository;
+    }
+
+    // UI-level responses
+    public static class BotResponse {
+        String text;
+        List<String> options; // quick replies for severity/duration
+        BotResponse(String text) { this.text = text; }
+        BotResponse(String text, List<String> options) { this.text = text; this.options = options; }
     }
 
     /**
-     * Main entry point for each inbound chat message.
-     * It creates or resumes a case, stores the raw note, and returns a bot JSON response.
-     * @param sessionId unique browser session identifier (stored in localStorage)
-     * @param text user message as entered in the chat UI
-     * @return JSON payload containing a bot response bubble
-     */
+     * handle: main entry point for each user message
+     * - Creates / retrieves session state
+     * - Starts a new Case when needed (new boot run or missing active case)
+     * - Records user messages into notes
+     * - Extracts symptom candidates
+     * - Builds the next bot reply
+     * - Persists + returns JSON for the frontend
+     **/
     public String handle(String sessionId, String text) {
+        // Get the session state for this sessionId, creating one if it doesn't exist
         ConversationState st = sessions.computeIfAbsent(sessionId, ConversationState::new);
 
         // New server run => new case, even if browser keeps same sessionId
         if (!bootId.equals(st.bootSeen) || st.activeCase == null) {
+            if (st.activeCase != null && !st.activeCase.notes.isEmpty()) {
+                persistCase(st.activeCase, sessionId);
+            }
             st.bootSeen = bootId;
             st.activeCase = new Case();
             System.out.println("[ConversationEngine] New case started for session " + sessionId);
@@ -59,172 +85,220 @@ public class ConversationEngine {
 
         Case c = st.activeCase;
 
+        // Normalize user input
         text = (text == null) ? "" : text.trim();
+        // If user sends nothing, prompt them with guidance on what to type.
         if (text.isEmpty()) {
-            return botJson("Type what’s going on (you can list symptoms like: “fever, cough, sore throat”).");
+            return respond(new BotResponse(
+                    "Type what’s going on (you can list symptoms like: “fever, cough, sore throat”)."
+            ), c, sessionId);
         }
-
+        // If case is locked, do not keep collecting: return final triage summary immediately.
         if (c.locked) {
-
             // When a case is locked, immediately return the existing summary so the user
             // understands the final recommendation without confusion.
-            return botJson(triageSummary(c));
+            return respond(new BotResponse(triageSummary(c)), c, sessionId);
         }
 
-        // Always record the raw message
-        c.notes.add(text);
-        boolean foundCandidate = extractAndStoreCandidates(c, text);
 
-        String reply = buildReply(c, text, foundCandidate);
-        return botJson(reply);
-    }
+        c.notes.add(text); // Records the raw message
+        extractAndStoreCandidates(c, text); // Extract symptom candidates and update candidateConfidenceByCode.
+
+        BotResponse reply = buildReply(c, text);
+        return respond(reply, c, sessionId);
+    } // End handle method
 
     // ------------------------------------------------------------
-    // Phase 1 reply
+    // Conversation flow
 
-    private String buildReply(Case c, String text, boolean foundCandidate) {
-        String norm = normalize(text);
-        boolean unclear = isUnclear(norm, foundCandidate);
+    /**
+     * - Central conversation router
+     * - Decides whether the program is: opening, clarifying, collecting info, collecting more, or ready
+     * - Updates mode and counters on the Case
+     * - Returns a BotResponse
+     * @param c
+     * @param text
+     */
+    private BotResponse buildReply(Case c, String text) {
+        String norm = normalize(text);  // normalized string of the user's comment
+
+        // Scan for information
+        DurationParseResult durationAttempt = parseDuration(norm);
+        String severityAttempt = extractSeverity(norm);
+        boolean respondingToDuration = "ask_duration".equals(c.lastBotKey) && durationAttempt != null;
+        boolean respondingToSeverity = "ask_severity".equals(c.lastBotKey) && !severityAttempt.isEmpty();
+        boolean unclear = isUnclear(norm);
+        if (respondingToDuration || respondingToSeverity) {
+            unclear = false;
+        }
         boolean greeting = isGreeting(norm);
 
         // 1) First message: acknowledge + encourage symptom listing
         if (c.userMessageCount() == 1) {
+            // Reset clarify counter on the first real user turn
+            c.unclearCount = 0;
             String ack = pickAck(c.caseId);
 
-            // If they greeted us, greet back but push toward symptoms
+            // If they greeted, greet back but push toward symptoms
             if (greeting) {
-                return nextNonRepeating(c, "greet_pushy",
-                        "Hi again! I’m here to help, but I need symptoms to guide you. Describe what you’re feeling (for example: “chest tightness for 90 minutes, moderate”).");
+                return new BotResponse(nextNonRepeating(c, "greet_pushy",
+                        "Hi again! I’m here to help, but I need symptoms to guide you. Describe what you’re feeling (for example: “chest tightness for 90 minutes, moderate”)."));
             }
-
 
             if (unclear) {
                 c.mode = Case.Mode.CLARIFYING;
-                return nextNonRepeating(c, "clarify_1",
-                        ack + " I didn’t fully understand. Rephrase in ONE sentence, or list symptoms separated by commas.");
+                return new BotResponse(nextNonRepeating(c, "clarify_1",
+                        ack + " I didn’t fully understand. Tell me a few symptoms or what feels worst right now."));
             }
 
-            c.mode = Case.Mode.GATHER_SLOTS;
+            c.mode = Case.Mode.GATHER_INFO;
 
-            // Try to pull slots immediately if they included them
-            fillSlotsFromText(c, norm);
+            // Try to pull severity/duration immediately if they included them
+            fillInfoFromText(c, norm);
 
             // Ask only what’s missing
-            return askNextMissingSlotOrCollect(c, ack);
+            return askNextMissingOrCollect(c, ack);
         }
 
-        // 2) If unclear, handle CLARIFYING path (don’t loop forever)
+        // 2) If unclear, run the clarifying logic path
         if (unclear) {
             c.mode = Case.Mode.CLARIFYING;
+            c.unclearCount += 1; // track how often we asked for clarity
 
             // If they keep sending unclear things, give a concrete format
+            if (c.unclearCount >= 3) {
+                return new BotResponse(nextNonRepeating(c, "clarify_format",
+                        "I’m still having trouble. Tell me the main symptoms and how long they’ve been happening."));
+            }
             if ("clarify_2".equals(c.lastBotKey)) {
-                return nextNonRepeating(c, "clarify_format",
-                        "Try this format: “Symptoms: ____. Started: ____. Severity: mild/moderate/severe.”");
+                return new BotResponse(nextNonRepeating(c, "clarify_2b",
+                        "Can you share a couple symptoms and roughly how long they’ve been going on?"));
             }
 
-            return nextNonRepeating(c, "clarify_2",
-                    "I’m not fully sure I understood. Rephrase in one sentence or list symptoms separated by commas.");
+            return new BotResponse(nextNonRepeating(c, "clarify_2",
+                    "I’m not fully sure I understood. Tell me the key symptoms and when they started."));
         }
 
-        // 3) If we were clarifying and now they are clear, move forward
+        // 3) If clarifying worked, move forth
         if (c.mode == Case.Mode.CLARIFYING) {
-            c.mode = Case.Mode.GATHER_SLOTS;
+            c.mode = Case.Mode.GATHER_INFO;
+            c.unclearCount = 0; // reset once we get a clear message
         }
 
-        // 4) Always attempt to fill slots from any clear message
-        fillSlotsFromText(c, norm);
+        // 4) Always attempt to fill info from any clear message
+        fillInfoFromText(c, norm);
 
-        // 5) If slots still missing, ask one at a time
+        // 5) If severity/duration are still missing, ask one at a time
         if (c.duration.isEmpty() || c.severity.isEmpty()) {
-            c.mode = Case.Mode.GATHER_SLOTS;
-            return askNextMissingSlotOrCollect(c, "");
+            c.mode = Case.Mode.GATHER_INFO;
+            return askNextMissingOrCollect(c, "");
         }
 
-        // 6) Slots present => collect more symptoms until user indicates done
+        // 6) Collect more symptoms until user indicates done or dangerous symptoms are detected
         c.mode = Case.Mode.COLLECT_MORE;
 
         // If enough info is gathered, lock in a triage decision
-        String triageNow = maybeTriage(c, norm);
+        BotResponse triageNow = maybeTriage(c, norm);
         if (triageNow != null) {
             return triageNow;
         }
 
+        // If there are no more symptoms being listed,
+        // show a small internal summary of what info was collected
         if (userSeemsDone(norm)) {
             c.mode = Case.Mode.READY;
-            return "Alright. Here’s what I have so far:\n"
+            return new BotResponse("Alright. Here’s what I have so far:\n"
                     + "- Duration: " + c.duration + "\n"
                     + "- Severity: " + c.severity + "\n"
-                    + "- Notes count: " + c.notes.size() + "\n\n"
-                    + "Next phase will summarize detected symptoms and explain the recommendation. "
-                    + "If you want, add one more detail (age group, fever temperature, or meds taken).";
+                    + "- Notes count: " + c.notes.size() + "\n\n");
         }
+        // Prompt furthur
+        return new BotResponse(nextNonRepeating(c, "collect_more",
+                "Got it. Anything else you’re noticing?"));
+    }  // End of buildReply method
 
-        return nextNonRepeating(c, "collect_more",
-                "Noted. Anything else you’re noticing? (list symptoms, even minor)");
-    }
-
-    private String askNextMissingSlotOrCollect(Case c, String prefixAck) {
+    /**
+     * Ask for severity/duration based on wether or not they're missing
+     * Else prompt user to list more symptoms
+     */
+    private BotResponse askNextMissingOrCollect(Case c, String prefixAck) {
         if (c.duration.isEmpty()) {
-            // Ask for duration with flexible units
-            return nextNonRepeating(c, "ask_duration",
+            // Ask for duration with flexible units so cases like “90 minutes” are covered
+            return new BotResponse(nextNonRepeating(c, "ask_duration",
                     (prefixAck.isEmpty() ? "" : prefixAck + " ")
-                            + "How long has this been going on? You can answer with minutes, hours, days," +
-                            " or weeks (examples: “45 minutes”, “2 hours”, “3 days”).");
+                            + "How long has this been going on? You can answer with minutes, hours, days, or weeks (examples: “45 minutes”, “2 hours”, “3 days”)."),
+                    List.of("30 minutes", "2 hours", "3 days", "2 weeks"));
+
         }
 
         if (c.severity.isEmpty()) {
-            return nextNonRepeating(c, "ask_severity",
-                    (prefixAck.isEmpty() ? "" : prefixAck + " ")
-                            + "Overall, how bad is it right now? (mild / moderate / severe)");
+            return new BotResponse(nextNonRepeating(c, "ask_severity",
+                    (prefixAck.isEmpty() ? "" : prefixAck + " ") + "Overall, how bad is it right now?"),
+                    List.of("mild", "moderate", "severe"));
         }
 
-        return nextNonRepeating(c, "collect_more",
+        // Collect more details once severtiy/duration are filled
+        return new BotResponse(nextNonRepeating(c, "collect_more",
                 (prefixAck.isEmpty() ? "" : prefixAck + " ")
-                        + "Got it. List any other symptoms you’re noticing (even if they seem minor).");
+                        + "Got it. List any other symptoms you’re noticing (even if they seem minor)."));
     }
 
-    private void fillSlotsFromText(Case c, String norm) {
-        if (c.duration.isEmpty()) {
-            // Try to parse any written duration (minutes/hours/days/weeks) so the user has flexibility
-            DurationParseResult parsed = parseDuration(norm);
-            if (parsed != null) {
-                c.duration = parsed.label;
-                c.durationMinutes = parsed.minutes;
-            }
+    /**
+     * Try to extract severity/duration
+     * only if needed.
+     * Updates info to the case final summary
+     */
+
+    private void fillInfoFromText(Case c, String norm) {
+        DurationParseResult parsed = parseDuration(norm);
+
+        // Only overwrite duration if it makes sense in context
+        if (parsed != null && shouldUpdateDuration(c, parsed, norm)) {
+            c.duration = parsed.label;
+            c.durationMinutes = parsed.minutes;
         }
-        if (c.severity.isEmpty()) {
-            c.severity = extractSeverity(norm);
+
+        // Check keywords then overwrite
+        String severity = extractSeverity(norm);
+        if (!severity.isEmpty() && shouldUpdateSeverity(c, norm)) {
+            c.severity = severity;
         }
     }
 
     // ------------------------------------------------------------
-    // Slot extraction
+    // info extraction
 
     private String extractSeverity(String norm) {
-        if (norm.contains("mild") || norm.contains("minor") || norm.contains("manageable")) return "mild";
-        if (norm.contains("moderate") || norm.contains("medium")) return "moderate";
-        if (norm.contains("severe") || norm.contains("extreme") || norm.contains("worst")) return "severe";
-        if (norm.contains("really bad") || norm.contains("very bad") || norm.contains("awful") || norm.contains("terrible")) {
-            return "severe";
-        }
-        if (norm.contains("bad")) return "moderate";
+        if (norm.contains("mild")) return "mild";
+        if (norm.contains("moderate")) return "moderate";
+        if (norm.contains("severe")) return "severe";
+        if (norm.contains("really bad")) return "severe";
         return "";
     }
 
     /**
      * Duration can be provided in minutes, hours, days, or weeks. The method extracts
      * a numeric value (in minutes) and also keeps a friendly label for display.
-     * @param  norm
-     * @return
      */
     private DurationParseResult parseDuration(String norm) {
-        // Alternate phrases that lack numbers but imply short durations
+        // Ambiguous phrases that lack numbers but imply short durations
         if (norm.contains("few minutes")) {
             return new DurationParseResult("few minutes (~10)", 10);
         }
         if (norm.contains("few hours")) {
             return new DurationParseResult("few hours (~180)", 180);
+        }
+        if (norm.contains("few days")) {
+            return new DurationParseResult("few days (~3)", 3 * 60 * 24);
+        }
+        if (norm.contains("few weeks")) {
+            return new DurationParseResult("few weeks (~3)", 3 * 60 * 24 * 7);
+        }
+        if (norm.contains("past week") || norm.contains("last week")) {
+            return new DurationParseResult("1 week", 7 * 60 * 24);
+        }
+        if (norm.contains("past day") || norm.contains("last day")) {
+            return new DurationParseResult("1 day", 60 * 24);
         }
         if (norm.contains("half hour") || norm.contains("half an hour")) {
             return new DurationParseResult("30 minutes", 30);
@@ -233,23 +307,15 @@ public class ConversationEngine {
             return new DurationParseResult("90 minutes", 90);
         }
 
-        // General numeric extraction: look for "<number> <unit>"
-        // Examples: "90 minutes", "1.5 hours", "2 days", "3 weeks"
+        // General number extraction
         String[] tokens = norm.split(" ");
         for (int i = 0; i < tokens.length; i++) {
             Double value = tryParseDouble(tokens[i]);
-            if (value == null) {
-                // Handle spoken forms like "one", "two", "three" if needed in the future
-                continue;
-            }
+            if (value == null) continue;
 
-            // Peek the next token to identify the unit
-            if (i + 1 >= tokens.length) {
-                continue;
-            }
+            if (i + 1 >= tokens.length) continue;
             String unit = tokens[i + 1];
 
-            // Normalize unit text
             if (unit.startsWith("min")) {
                 double minutes = value;
                 return new DurationParseResult(formatDurationLabel(value, "minute"), minutes);
@@ -268,27 +334,15 @@ public class ConversationEngine {
             }
         }
 
-        // If nothing matched, return null to signal "not found"
         return null;
     }
 
     private Double tryParseDouble(String token) {
-        // Handle quick word-based numbers for flexibility
-        if ("a".equals(token) || "an".equals(token) || "one".equals(token)) {
-            return 1.0;
-        }
-        if ("two".equals(token) || "couple".equals(token)) {
-            return 2.0;
-        }
-        if ("three".equals(token)) {
-            return 3.0;
-        }
-        if ("four".equals(token)) {
-            return 4.0;
-        }
-        if ("five".equals(token)) {
-            return 5.0;
-        }
+        if ("a".equals(token) || "an".equals(token) || "one".equals(token)) return 1.0;
+        if ("two".equals(token) || "couple".equals(token)) return 2.0;
+        if ("three".equals(token)) return 3.0;
+        if ("four".equals(token)) return 4.0;
+        if ("five".equals(token)) return 5.0;
 
         try {
             return Double.parseDouble(token);
@@ -298,82 +352,117 @@ public class ConversationEngine {
     }
 
     private String formatDurationLabel(double value, String unit) {
-        // Avoid showing trailing .0 for whole numbers while keeping clarity
         boolean whole = Math.abs(value - Math.round(value)) < 0.0001;
-        String numberText = whole ? String.valueOf((long) Math.round(value)) : String.format(Locale.ROOT, "%.2f", value);
-        // Pluralize when needed
+        String numberText = whole
+                ? String.valueOf((long) Math.round(value))
+                : String.format(Locale.ROOT, "%.2f", value);
+
         String unitText = (Math.abs(value) == 1.0) ? unit : unit + "s";
         return numberText + " " + unitText;
     }
 
-    private double computeDurationFactor(Case c) {
-        // Default factor if no duration is known
-        double durationFactor = 1.0;
+    private boolean shouldUpdateDuration(Case c, DurationParseResult parsed, String norm) {
+        boolean askedDuration = "ask_duration".equals(c.lastBotKey);
+        boolean hasContext = containsAnyToken(norm, DURATION_CONTEXT);
+        boolean hasCorrection = containsAnyToken(norm, CORRECTION_TOKENS);
 
-        // If we have a numeric duration in minutes, use it directly
+        if (c.duration.isEmpty()) {
+            return askedDuration || hasContext || parsed.minutes > 0;
+        }
+
+        if (askedDuration) return true;
+        if (parsed.minutes <= 0) return false;
+        if (hasCorrection) return true;
+        if (!hasContext) return false;
+        if (c.durationMinutes <= 0) return true;
+        return parsed.minutes >= c.durationMinutes;
+    }
+
+    private boolean shouldUpdateSeverity(Case c, String norm) {
+        if (c.severity.isEmpty()) return true;
+        if ("ask_severity".equals(c.lastBotKey)) return true;
+        return containsAnyToken(norm, CORRECTION_TOKENS);
+    }
+
+    private boolean containsAnyToken(String norm, Set<String> tokens) {
+        if (norm.isEmpty()) return false;
+        String[] parts = norm.split(" ");
+        for (String part : parts) {
+            if (tokens.contains(part)) return true;
+        }
+        return false;
+    }
+
+    private double computeDurationMultiplier(Case c) {
+        double durationMultiplier = 1.0;
+
         if (c.durationMinutes > 0) {
             double minutes = c.durationMinutes;
 
-            // 0 - 2 hours: slight bump because it is acute and recent
-            if (minutes <= 120) {
-                durationFactor = 1.05;
-            }
-            // Same-day but longer than 2 hours
-            else if (minutes <= 1440) { // 24 hours
-                durationFactor = 1.10;
-            }
-            // 1-3 days
-            else if (minutes <= 4320) { // 3 days
-                durationFactor = 1.15;
-            }
-            // 3-7 days
-            else if (minutes <= 10080) { // 7 days
-                durationFactor = 1.20;
-            }
-            // 1-2 weeks
-            else if (minutes <= 20160) { // 14 days
-                durationFactor = 1.25;
-            }
-            // More than 2 weeks
-            else {
-                durationFactor = 1.30;
-            }
-            return durationFactor;
+            if (minutes <= 30) durationMultiplier = 1.00;
+            else if (minutes <= 120) durationMultiplier = 1.15;
+            else if (minutes <= 360) durationMultiplier = 1.30;
+            else if (minutes <= 1440) durationMultiplier = 1.45;
+            else if (minutes <= 4320) durationMultiplier = 1.60;
+            else durationMultiplier = 1.75;
+
+            return durationMultiplier;
         }
 
-        // Fallback: check the textual bucket for older saved cases
         String d = c.duration == null ? "" : c.duration.toLowerCase(Locale.ROOT);
-        if (d.contains("today")) {
-            durationFactor = 1.10;
-        } else if (d.contains("1-2 days") || d.contains("1 2 days") || d.contains("yesterday")) {
-            durationFactor = 1.05;
-        } else if (d.contains("3-7 days") || d.contains("3 7 days")) {
-            durationFactor = 1.15;
-        } else if (d.contains("1-2 weeks") || d.contains("1 2 weeks")) {
-            durationFactor = 1.20;
-        } else if (d.contains("2+ weeks") || d.contains("2 weeks")) {
-            durationFactor = 1.25;
-        }
+        if (d.contains("today")) durationMultiplier = 1.20;
+        else if (d.contains("1-2 days") || d.contains("1 2 days") || d.contains("yesterday")) durationMultiplier = 1.15;
+        else if (d.contains("3-7 days") || d.contains("3 7 days")) durationMultiplier = 1.30;
+        else if (d.contains("1-2 weeks") || d.contains("1 2 weeks")) durationMultiplier = 1.45;
+        else if (d.contains("2+ weeks") || d.contains("2 weeks")) durationMultiplier = 1.60;
 
-        return durationFactor;
+        return durationMultiplier;
+    }
+
+    private double computeSeverityMultiplier(String severity) {
+        if ("moderate".equals(severity)) return 1.30;
+        if ("severe".equals(severity)) return 1.70;
+        return 1.0;
+    }
+
+    private double computeDurationBoost(Case c) {
+        if (c.durationMinutes <= 0) return 0.0;
+        double minutes = c.durationMinutes;
+        if (minutes >= 1440) return 1.6;
+        if (minutes >= 360) return 1.2;
+        if (minutes >= 120) return 0.8;
+        return 0.0;
+    }
+
+    private double computeSeverityBoost(String severity) {
+        if ("severe".equals(severity)) return 1.2;
+        if ("moderate".equals(severity)) return 0.5;
+        return 0.0;
+    }
+
+    private boolean isProlongedDuration(Case c) {
+        if (c.durationMinutes >= 120) return true;
+        String d = c.duration == null ? "" : c.duration.toLowerCase(Locale.ROOT);
+        return d.contains("day") || d.contains("week") || d.contains("today");
     }
 
     private boolean userSeemsDone(String norm) {
         return norm.contains("that s it")
                 || norm.contains("thats it")
+                || norm.contains("that is it")
+                || norm.contains("that's it")
+                || norm.contains("that is all")
                 || norm.contains("nothing else")
                 || norm.contains("no more")
                 || norm.equals("done");
     }
 
-    private boolean extractAndStoreCandidates(Case c, String rawText) {
+    private void extractAndStoreCandidates(Case c, String rawText) {
         String norm = KnowledgeBase.normalize(rawText);
-        if (norm.isEmpty()) return false;
+        if (norm.isEmpty()) return;
 
         List<String> phrases = makeNGrams(norm, 4);
-
         boolean anyExact = false;
-        boolean anyFuzzy = false;
 
         // Pass 1: exact phrase matches
         for (String ph : phrases) {
@@ -382,41 +471,24 @@ public class ConversationEngine {
             anyExact = true;
             for (String code : codes) {
                 bumpCandidate(c, code, 1.0);
-                System.out.println("Candidates now: " + c.candidateConfidenceByCode);
+                System.out.println("[SymptomMatch] Exact alias hit=\"" + ph + "\" -> code=" + code);
             }
         }
 
-        // Pass 2: fuzzy phrase matches (for misspellings or partials)
-        for (String phrase : phrases) {
-            if (phrase.length() < 4) continue;
-            FuzzyHit hit = bestFuzzy(phrase, kb.allAliases);
-            if (hit != null && hit.score >= 0.75) {
-                List<String> codes = kb.codesByAlias.get(hit.alias);
-                if (codes != null) {
-                    for (String code : codes) bumpCandidate(c, code, hit.score);
-                    anyFuzzy = true;
-                    System.out.println("Candidates now (fuzzy): " + c.candidateConfidenceByCode);
-                    System.out.println("[SymptomMatch] Fuzzy phrase=\"" + phrase + "\" matched alias=\"" + hit.alias + "\" score=" + hit.score);
+        // Pass 2: fuzzy token matches (only if no exact)
+        if (!anyExact) {
+            for (String token : norm.split(" ")) {
+                if (token.length() < 3) continue;
+                FuzzyHit hit = bestFuzzy(token, kb.allAliases);
+                if (hit != null && hit.score >= 0.80) {
+                    List<String> codes = kb.codesByAlias.get(hit.alias);
+                    if (codes != null) {
+                        for (String code : codes) bumpCandidate(c, code, hit.score);
+                        System.out.println("[SymptomMatch] Fuzzy token=\"" + token + "\" matched alias=\"" + hit.alias + "\" score=" + hit.score);
+                    }
                 }
             }
         }
-
-        // Pass 3: fuzzy token matches for short inputs
-        for (String token : norm.split(" ")) {
-            if (token.length() < 3) continue;
-            FuzzyHit hit = bestFuzzy(token, kb.allAliases);
-            if (hit != null && hit.score >= 0.72) {
-                List<String> codes = kb.codesByAlias.get(hit.alias);
-                if (codes != null) {
-                    for (String code : codes) bumpCandidate(c, code, hit.score);
-                    anyFuzzy = true;
-                    System.out.println("Candidates now (fuzzy): " + c.candidateConfidenceByCode);
-                    System.out.println("[SymptomMatch] Fuzzy token=\"" + token + "\" matched alias=\"" + hit.alias + "\" score=" + hit.score);
-                }
-            }
-        }
-
-        return anyExact || anyFuzzy;
     }
 
     private void bumpCandidate(Case c, String code, double confidence) {
@@ -456,7 +528,6 @@ public class ConversationEngine {
         return best;
     }
 
-    // Simple similarity based on edit distance ratio (deterministic)
     private double similarity(String a, String b) {
         int d = editDistance(a, b);
         int max = Math.max(a.length(), b.length());
@@ -481,17 +552,15 @@ public class ConversationEngine {
         return dp[a.length()][b.length()];
     }
 
-
     // ------------------------------------------------------------
     // Unclear detection (use normalized string)
 
-    private boolean isUnclear(String norm, boolean foundCandidate) {
+    private boolean isUnclear(String norm) {
         if (norm.isEmpty()) return true;
+        if (userSeemsDone(norm)) return false;
 
         Set<String> filler = Set.of("idk", "help", "please", "uh", "umm", "yo", "hey");
         if (filler.contains(norm)) return true;
-
-        if (foundCandidate || isLikelySlotAnswer(norm)) return false;
 
         String[] parts = norm.split(" ");
         int realWords = 0;
@@ -499,10 +568,6 @@ public class ConversationEngine {
             if (p.length() >= 3) realWords++;
         }
         return realWords < 2;
-    }
-
-    private boolean isLikelySlotAnswer(String norm) {
-        return !extractSeverity(norm).isEmpty() || parseDuration(norm) != null;
     }
 
     private String normalize(String s) {
@@ -523,9 +588,7 @@ public class ConversationEngine {
     }
 
     private String nextNonRepeating(Case c, String key, String msg) {
-        if (key.equals(c.lastBotKey)) {
-            return msg; // already said it; but we won't spam because caller uses different keys
-        }
+        if (key.equals(c.lastBotKey)) return msg;
         c.lastBotKey = key;
         return msg;
     }
@@ -538,14 +601,71 @@ public class ConversationEngine {
     // ------------------------------------------------------------
     // JSON builder
 
-    private String botJson(String text) {
-        return "{"
-                + "\"type\":\"bot\","
-                + "\"text\":\"" + escapeJson(text) + "\""
-                + "}";
+    /**
+     * generate the java respone into JSON so that app.js can read it.
+     * @param resp
+     * @param c
+     */
+    private String responseJson(BotResponse resp, Case c) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("{");
+        sb.append("\"type\":\"bot\",");
+        sb.append("\"text\":\"").append(escapeJson(resp.text)).append("\"");
+
+        // Include locked and triage details when we know the case
+        if (c != null) {
+            sb.append(",\"locked\":").append(c.locked);
+            if (c.triageComplete) {
+                sb.append(",\"triageLevel\":\"").append(escapeJson(c.triageLevel)).append("\"");
+                sb.append(",\"triageConfidence\":").append(String.format(Locale.ROOT, "%.4f", c.triageConfidence));
+                sb.append(",\"redFlags\":[");
+                for (int i = 0; i < c.triageRedFlags.size(); i++) {
+                    if (i > 0) sb.append(",");
+                    sb.append("\"").append(escapeJson(c.triageRedFlags.get(i))).append("\"");
+                }
+                sb.append("],\"reasons\":[");
+                for (int i = 0; i < c.triageReasons.size(); i++) {
+                    if (i > 0) sb.append(",");
+                    sb.append("\"").append(escapeJson(c.triageReasons.get(i))).append("\"");
+                }
+                sb.append("]");
+                if (c.duration != null && !c.duration.isEmpty()) {
+                    sb.append(",\"duration\":\"").append(escapeJson(c.duration)).append("\"");
+                }
+            }
+        }
+
+        // Quick reply options for the UI
+        if (resp.options != null && !resp.options.isEmpty()) {
+            sb.append(",\"options\":[");
+            for (int i = 0; i < resp.options.size(); i++) {
+                if (i > 0) sb.append(",");
+                sb.append("\"").append(escapeJson(resp.options.get(i))).append("\"");
+            }
+            sb.append("]");
+        }
+
+        sb.append("}");
+        return sb.toString();
+    } // End responseJson method
+
+    private String respond(BotResponse resp, Case c, String sessionId) {
+        persistCase(c, sessionId);
+        return responseJson(resp, c);
+    }
+
+    private void persistCase(Case c, String sessionId) {
+        if (repository == null || c == null) {
+            return;
+        }
+        if (c.notes.isEmpty()) {
+            return;
+        }
+        repository.saveCase(c, sessionId);
     }
 
     private String escapeJson(String s) {
+        if (s == null) return "";
         return s.replace("\\", "\\\\")
                 .replace("\"", "\\\"")
                 .replace("\n", "\\n")
@@ -555,109 +675,117 @@ public class ConversationEngine {
     // ------------------------------------------------------------
     // Triage logic
 
-    private String maybeTriage(Case c, String norm) {
-        if (c.triageComplete) return triageSummary(c);
+    /**
+     * recalibrate the confidence levels each message transaction
+     * @param c
+     * @param norm
+     */
+    private BotResponse maybeTriage(Case c, String norm) {
+        if (c.triageComplete) return new BotResponse(triageSummary(c));
         if (c.candidateConfidenceByCode.isEmpty()) return null;
         if (c.duration.isEmpty() || c.severity.isEmpty()) return null;
 
         boolean userReady = userSeemsDone(norm) || c.notes.size() >= 3;
         if (!userReady) return null;
 
-        // Severity weighting uses standard switch syntax for clarity
-        double severityFactor = switch (c.severity) {
-            case "moderate" -> 1.15;
-            case "severe" -> 1.35;
-            default -> 1.0;
-        };
+        double severityMultiplier = computeSeverityMultiplier(c.severity);
+        double durationMultiplier = computeDurationMultiplier(c);
+        double severityBoost = computeSeverityBoost(c.severity);
+        double durationBoost = computeDurationBoost(c);
 
-        // Duration weighting uses a helper that understands minutes/hours/days/weeks
-        double durationFactor = computeDurationFactor(c);
+        List<String> redFlags = new ArrayList<>();
+        List<String> reasons = new ArrayList<>();
+        double baseScore = 0.0;
+        boolean hasNosebleed = false;
 
-        // Collect running stats for the decision
-        List<String> redFlags = new ArrayList<>(); // stores red-flag symptom labels with confidence
-        List<String> reasons = new ArrayList<>();  // stores non-red-flag contributing symptoms
-        double score = 0.0;                        // accumulates weighted sum used for non-red decisions
-
-        // Walk over every candidate symptom detected in the conversation
         for (Map.Entry<String, Double> e : c.candidateConfidenceByCode.entrySet()) {
-            // Look up the symptom definition (weight + redFlag)
             Symptom s = kb.symptomByCode.get(e.getKey());
-            if (s == null) continue; // Safety: skip if KB is missing the code
+            if (s == null) continue;
 
-            double confidence = e.getValue(); // value already normalized to 0..1
+            double confidence = e.getValue();
+            double weighted = s.weight * confidence;
+            baseScore += weighted;
 
-            // Weighted score uses symptom weight, user-provided severity, and duration
-            double weighted = s.weight * confidence * severityFactor * durationFactor;
-            score += weighted; // add to the total score
+            System.out.println("[Triage] Scoring symptom code=" + s.code + " label=" + s.label
+                    + " weight=" + s.weight + " conf=" + confidence + " weighted=" + weighted);
 
-            // Red-flag detection: high confidence on a redFlag symptom is enough to escalate
-            if (s.redFlag && confidence >= 0.55) {
-                String formatted = s.label + " (conf " + String.format(Locale.ROOT, "%.0f%%", confidence * 100) + ")";
-                redFlags.add(formatted);
+            if (s.redFlag && confidence >= 0.60) {
+                String reason = s.label + " (conf " + String.format(Locale.ROOT, "%.0f%%", confidence * 100) + ")";
+                redFlags.add(reason);
+                reasons.add(reason);
+            } else if (confidence >= 0.40) {
+                reasons.add(s.label + " (conf " + String.format(Locale.ROOT, "%.0f%%", confidence * 100) + ")");
             }
-            // Non-red contributions above 40% are recorded as supporting reasons
-            else if (confidence >= 0.40) {
-                String formatted = s.label + " (conf " + String.format(Locale.ROOT, "%.0f%%", confidence * 100) + ")";
-                reasons.add(formatted);
+
+            if ("NOSEBLEED".equals(s.code) && confidence >= 0.50) {
+                hasNosebleed = true;
             }
         }
 
-        // Decide the final level and a coarse confidence for that level
+        double score = (baseScore * severityMultiplier * durationMultiplier) + severityBoost + durationBoost;
+        boolean prolongedNosebleed = hasNosebleed && c.durationMinutes >= 120;
+
+        if ("severe".equals(c.severity)) {
+            reasons.add("Reported severity: severe");
+        } else if ("moderate".equals(c.severity)) {
+            reasons.add("Reported severity: moderate");
+        }
+
+        if (isProlongedDuration(c) && c.duration != null && !c.duration.isEmpty()) {
+            reasons.add("Symptoms ongoing for " + c.duration);
+        }
+
         String level;
         double confScore;
-
-        // Branch 1: any strong red flag => immediate ER recommendation
+        // decision:
         if (!redFlags.isEmpty()) {
+            level = "911";
+            confScore = 0.92;
+            System.out.println("[Triage] Red-flag escalation. Red flags: " + redFlags);
+        } else if (prolongedNosebleed) {
+            level = "severe".equals(c.severity) ? "911" : "ER now";
+            confScore = 0.90;
+            reasons.add("Nosebleed lasting 2+ hours");
+            System.out.println("[Triage] Prolonged nosebleed escalation.");
+        } else if (score >= 8.0) {
             level = "ER now";
-            confScore = 0.90; // high confidence because red-flag presence is decisive
-            reasons.add("Red-flag symptom detected");
-        }
-        // Branch 2: heavy weighted score => urgent doctor evaluation
-        else if (score >= 8.0) {
-            level = "Doctor within 24 hours";
             confScore = Math.min(1.0, 0.70 + score / 15.0);
-        }
-        // Branch 3: moderate score => doctor visit recommended
-        else if (score >= 4.0) {
+            System.out.println("[Triage] High score path. score=" + score);
+        } else if (score >= 4.0) {
             level = "Doctor visit recommended";
             confScore = Math.min(1.0, 0.60 + score / 12.0);
-        }
-        // Branch 4: low score => monitor at home with caution
-        else {
+            System.out.println("[Triage] Moderate score path. score=" + score);
+        } else {
             level = "Self-care / monitor";
             confScore = Math.min(1.0, 0.50 + score / 10.0);
-            if (reasons.isEmpty()) {
-                reasons.add("No significant symptoms detected yet");
-            }
+            if (reasons.isEmpty()) reasons.add("No significant symptoms detected yet");
+            System.out.println("[Triage] Low score path. score=" + score);
         }
 
-        // Store final state on the case for persistence and later display
         c.triageComplete = true;
         c.locked = true;
         c.triageLevel = level;
         c.triageConfidence = confScore;
 
-        // Keep the reasons and red flags in insertion order for readability
         c.triageReasons.clear();
         c.triageReasons.addAll(reasons);
         c.triageRedFlags.clear();
         c.triageRedFlags.addAll(redFlags);
 
-        return triageSummary(c);
-    }
+        return new BotResponse(triageSummary(c));
+    } // End maybeTriage method
 
+    /**
+     * Outputs the final triage result
+     * @param c
+     * @return sb.toString();
+     */
     private String triageSummary(Case c) {
-        // Build a readable multi-line summary so the UI can show decisions directly
         StringBuilder sb = new StringBuilder();
         sb.append("Triage result: ").append(c.triageLevel.isEmpty() ? "Pending" : c.triageLevel);
         if (c.triageConfidence > 0) {
             sb.append(" (confidence ").append(String.format(Locale.ROOT, "%.0f%%", c.triageConfidence * 100)).append(")");
         }
-        // Show red flags first because they determine the strictest path
-        if (!c.triageRedFlags.isEmpty()) {
-            sb.append("\nRed flags: ").append(String.join(", ", c.triageRedFlags));
-        }
-        // Show supporting reasons so the student and user can understand the score
         if (!c.triageReasons.isEmpty()) {
             sb.append("\nReasons: ").append(String.join("; ", c.triageReasons));
         }
@@ -666,5 +794,5 @@ public class ConversationEngine {
         }
         sb.append("\nCase locked. Start a new session to begin another triage.");
         return sb.toString();
-    }
-}
+    }// End triageSummary method
+} // End ConversationEngine Class

@@ -1,64 +1,172 @@
 {
-  "version": "0.1",
+  "version": "0.2",
   "symptoms": [
     {"code":"FEVER","label":"Fever","category":"GENERAL","weight":2.0,"redFlag":false,
-      "aliases":["fever","high temperature","temperature","temp","feeling hot","feverish","running a fever"]},
+      "aliases":["fever","high temperature","temperature","temp","feeling hot","feverish","running a fever","hot to the touch"]},
+
+    {"code":"CHILLS","label":"Chills","category":"GENERAL","weight":1.4,"redFlag":false,
+      "aliases":["chills","shivering","shaky","cold sweats","feeling cold","goosebumps"]},
+
+    {"code":"FATIGUE","label":"Fatigue","category":"GENERAL","weight":1.0,"redFlag":false,
+      "aliases":["fatigue","tired","exhausted","low energy","worn out","fatigued"]},
+
+    {"code":"WEAKNESS","label":"Weakness","category":"GENERAL","weight":1.4,"redFlag":false,
+      "aliases":["weakness","feeling weak","no strength","weak all over"]},
+
+    {"code":"SORE_MUSCLES","label":"Muscle aches","category":"GENERAL","weight":1.1,"redFlag":false,
+      "aliases":["muscle aches","body aches","sore muscles","aches","muscle pain","my body hurts"]},
+
+    {"code":"HEADACHE","label":"Headache","category":"NEURO","weight":1.4,"redFlag":false,
+      "aliases":["headache","head pain","migraine","pressure in head","head hurts","throbbing head"]},
+
+    {"code":"SEVERE_HEADACHE","label":"Severe headache","category":"NEURO","weight":4.5,"redFlag":true,
+      "aliases":["worst headache","severe headache","sudden headache","thunderclap headache","headache like never before"]},
+
+    {"code":"DIZZINESS","label":"Dizziness","category":"NEURO","weight":1.8,"redFlag":false,
+      "aliases":["dizzy","dizziness","lightheaded","lightheadedness","room spinning","vertigo"]},
+
+    {"code":"FAINTING","label":"Fainting","category":"NEURO","weight":5.0,"redFlag":true,
+      "aliases":["fainting","passed out","passing out","blackout","fainted"]},
+
+    {"code":"CONFUSION","label":"Confusion","category":"NEURO","weight":4.0,"redFlag":true,
+      "aliases":["confused","confusion","disoriented","not making sense","out of it"]},
+
+    {"code":"SPEECH_TROUBLE","label":"Trouble speaking","category":"NEURO","weight":5.0,"redFlag":true,
+      "aliases":["slurred speech","trouble speaking","cant speak clearly","speech is slurred"]},
+
+    {"code":"NUMBNESS","label":"Numbness or tingling","category":"NEURO","weight":3.5,"redFlag":true,
+      "aliases":["numbness","tingling","pins and needles","arm numb","leg numb","face numb"]},
+
+    {"code":"SEIZURE","label":"Seizure","category":"NEURO","weight":5.0,"redFlag":true,
+      "aliases":["seizure","seizing","convulsion","convulsing","fit"]},
 
     {"code":"SORE_THROAT","label":"Sore throat","category":"RESP","weight":1.3,"redFlag":false,
       "aliases":["sore throat","throat pain","scratchy throat","pain swallowing","throat hurts"]},
 
     {"code":"COUGH","label":"Cough","category":"RESP","weight":1.2,"redFlag":false,
-      "aliases":["cough","coughing","dry cough","wet cough","phlegm cough"]},
+      "aliases":["cough","coughing","dry cough","wet cough","phlegm cough","hacking cough"]},
 
-    {"code":"RUNNY_NOSE","label":"Runny nose","category":"RESP","weight":0.8,"redFlag":false,
-      "aliases":["runny nose","runny nostril","nasal drip","dripping nose"]},
-
-    {"code":"STUFFY_NOSE","label":"Nasal congestion","category":"RESP","weight":0.8,"redFlag":false,
-      "aliases":["stuffy nose","blocked nose","congestion","nasal congestion"]},
-
-    {"code":"HEADACHE","label":"Headache","category":"NEURO","weight":1.4,"redFlag":false,
-      "aliases":["headache","head pain","migraine","pressure in head","head ache"]},
-
-    {"code":"NAUSEA","label":"Nausea","category":"GI","weight":1.3,"redFlag":false,
-      "aliases":["nausea","nauseous","feel sick to my stomach","queasy","sick","sick to my stomach","nauseated"]},
-
-    {"code":"VOMITING","label":"Vomiting","category":"GI","weight":2.2,"redFlag":false,
-      "aliases":["vomiting","throwing up","puking","threw up","throw up"]},
-
-    {"code":"DIARRHEA","label":"Diarrhea","category":"GI","weight":2.0,"redFlag":false,
-      "aliases":["diarrhea","loose stool","watery stool","runs","the runs"]},
-
-    {"code":"ABDOMINAL_PAIN","label":"Abdominal pain","category":"GI","weight":2.0,"redFlag":false,
-      "aliases":["stomach pain","abdominal pain","belly pain","cramps","stomach cramps"]},
-
-    {"code":"CHEST_PAIN","label":"Chest pain","category":"CARDIO","weight":5.0,"redFlag":true,
-      "aliases":["chest pain","chest tightness","pressure in chest","pain in chest","chest pressure","tight chest"]},
+    {"code":"WHEEZING","label":"Wheezing","category":"RESP","weight":2.8,"redFlag":true,
+      "aliases":["wheezing","whistling breath","wheeze","tight lungs"]},
 
     {"code":"SHORTNESS_OF_BREATH","label":"Shortness of breath","category":"RESP","weight":5.0,"redFlag":true,
-      "aliases":["shortness of breath","trouble breathing","hard to breathe","breathless","short of breath","can't breathe","cant breathe"]},
+      "aliases":["shortness of breath","trouble breathing","hard to breathe","breathless","cant catch my breath","can't breathe"]},
 
-    {"code":"FAINTING","label":"Fainting","category":"NEURO","weight":5.0,"redFlag":true,
-      "aliases":["fainting","passed out","passing out","blackout"]},
+    {"code":"RUNNY_NOSE","label":"Runny nose","category":"RESP","weight":0.8,"redFlag":false,
+      "aliases":["runny nose","runny nostril","nasal drip","dripping nose","runny sinuses"]},
 
-    {"code":"SEVERE_BLEEDING","label":"Severe bleeding","category":"INJURY","weight":5.0,"redFlag":true,
-      "aliases":["severe bleeding","won't stop bleeding","bleeding a lot","heavy bleeding"]},
+    {"code":"STUFFY_NOSE","label":"Nasal congestion","category":"RESP","weight":0.8,"redFlag":false,
+      "aliases":["stuffy nose","blocked nose","congestion","nasal congestion","nose is blocked"]},
+
+    {"code":"SINUS_PRESSURE","label":"Sinus pressure","category":"RESP","weight":1.2,"redFlag":false,
+      "aliases":["sinus pressure","sinus pain","pressure around eyes","face pressure","sinus headache"]},
+
+    {"code":"SNEEZING","label":"Sneezing","category":"RESP","weight":0.7,"redFlag":false,
+      "aliases":["sneezing","sneeze","sneezes a lot"]},
+
+    {"code":"LOSS_OF_SMELL","label":"Loss of smell","category":"RESP","weight":1.6,"redFlag":false,
+      "aliases":["loss of smell","cant smell","no smell","anosmia","smell is gone"]},
+
+    {"code":"LOSS_OF_TASTE","label":"Loss of taste","category":"RESP","weight":1.6,"redFlag":false,
+      "aliases":["loss of taste","cant taste","no taste","taste is gone","food tastes bland"]},
+
+    {"code":"CHEST_PAIN","label":"Chest pain","category":"CARDIO","weight":5.0,"redFlag":true,
+      "aliases":["chest pain","chest tightness","pressure in chest","pain in chest","tight chest"]},
+
+    {"code":"PALPITATIONS","label":"Heart palpitations","category":"CARDIO","weight":3.8,"redFlag":true,
+      "aliases":["palpitations","heart racing","rapid heartbeat","irregular heartbeat","pounding heart"]},
+
+    {"code":"SWELLING_LEGS","label":"Leg swelling","category":"CARDIO","weight":2.6,"redFlag":false,
+      "aliases":["leg swelling","swollen legs","ankle swelling","puffy ankles","feet swelling"]},
+
+    {"code":"NAUSEA","label":"Nausea","category":"GI","weight":1.3,"redFlag":false,
+      "aliases":["nausea","nauseous","feel sick to my stomach","queasy","sick","sick to my stomach"]},
+
+    {"code":"VOMITING","label":"Vomiting","category":"GI","weight":2.2,"redFlag":false,
+      "aliases":["vomiting","throwing up","puking","threw up","vomited"]},
+
+    {"code":"VOMITING_BLOOD","label":"Vomiting blood","category":"GI","weight":5.0,"redFlag":true,
+      "aliases":["vomiting blood","blood in vomit","throwing up blood","coffee ground vomit"]},
+
+    {"code":"DIARRHEA","label":"Diarrhea","category":"GI","weight":2.0,"redFlag":false,
+      "aliases":["diarrhea","loose stool","watery stool","runs","diarrhoea"]},
+
+    {"code":"BLOOD_IN_STOOL","label":"Blood in stool","category":"GI","weight":4.8,"redFlag":true,
+      "aliases":["blood in stool","bloody stool","black stool","tarry stool","blood when I poop"]},
+
+    {"code":"ABDOMINAL_PAIN","label":"Abdominal pain","category":"GI","weight":2.0,"redFlag":false,
+      "aliases":["stomach pain","abdominal pain","belly pain","cramps","stomach cramps","tummy pain"]},
+
+    {"code":"SEVERE_ABDOMINAL_PAIN","label":"Severe abdominal pain","category":"GI","weight":4.5,"redFlag":true,
+      "aliases":["severe abdominal pain","sharp stomach pain","worst stomach pain","unbearable belly pain"]},
+
+    {"code":"APPETITE_LOSS","label":"Loss of appetite","category":"GI","weight":1.2,"redFlag":false,
+      "aliases":["loss of appetite","no appetite","not hungry","cant eat","appetite is gone"]},
+
+    {"code":"CONSTIPATION","label":"Constipation","category":"GI","weight":1.1,"redFlag":false,
+      "aliases":["constipation","constipated","cant poop","no bowel movement","hard stool"]},
+
+    {"code":"DEHYDRATION","label":"Dehydration","category":"GENERAL","weight":2.2,"redFlag":false,
+      "aliases":["dehydration","dehydrated","dry mouth","very thirsty","dark urine","not peeing much"]},
 
     {"code":"RASH","label":"Rash","category":"SKIN","weight":1.4,"redFlag":false,
-      "aliases":["rash","hives","red spots","itchy rash"]},
+      "aliases":["rash","hives","red spots","itchy rash","skin rash"]},
 
     {"code":"ITCHING","label":"Itching","category":"SKIN","weight":1.0,"redFlag":false,
-      "aliases":["itching","itchy","skin itching"]},
+      "aliases":["itching","itchy","skin itching","pruritus"]},
+
+    {"code":"ALLERGIC_REACTION","label":"Severe allergic reaction","category":"IMMUNE","weight":5.0,"redFlag":true,
+      "aliases":["allergic reaction","anaphylaxis","throat closing","lip swelling","tongue swelling","face swelling","hives with swelling"]},
 
     {"code":"EAR_PAIN","label":"Ear pain","category":"ENT","weight":1.6,"redFlag":false,
-      "aliases":["ear pain","earache","pain in ear"]},
+      "aliases":["ear pain","earache","pain in ear","ear hurts","ear pressure"]},
 
-    {"code":"SORE_MUSCLES","label":"Muscle aches","category":"GENERAL","weight":1.1,"redFlag":false,
-      "aliases":["muscle aches","body aches","sore muscles","aches"]},
+    {"code":"EAR_DRAINAGE","label":"Ear drainage","category":"ENT","weight":2.0,"redFlag":false,
+      "aliases":["ear drainage","ear discharge","fluid from ear","ear leaking"]},
 
-    {"code":"FATIGUE","label":"Fatigue","category":"GENERAL","weight":1.0,"redFlag":false,
-      "aliases":["fatigue","tired","exhausted","low energy"]},
+    {"code":"SORE_EYES","label":"Eye pain or irritation","category":"ENT","weight":1.5,"redFlag":false,
+      "aliases":["eye pain","eye irritation","burning eyes","gritty eyes","eyes hurt"]},
 
-    {"code":"DIZZINESS","label":"Dizziness","category":"NEURO","weight":1.8,"redFlag":false,
-      "aliases":["dizzy","dizziness","lightheaded","lightheadedness","light headed"]}
+    {"code":"VISION_CHANGES","label":"Vision changes","category":"NEURO","weight":4.0,"redFlag":true,
+      "aliases":["vision changes","blurry vision","double vision","vision loss","cant see"]},
+
+    {"code":"BACK_PAIN","label":"Back pain","category":"INJURY","weight":1.6,"redFlag":false,
+      "aliases":["back pain","lower back pain","upper back pain","back hurts","backache"]},
+
+    {"code":"NECK_STIFFNESS","label":"Neck stiffness","category":"NEURO","weight":3.8,"redFlag":true,
+      "aliases":["neck stiffness","stiff neck","cant bend neck","neck is stiff"]},
+
+    {"code":"JOINT_PAIN","label":"Joint pain","category":"INJURY","weight":1.5,"redFlag":false,
+      "aliases":["joint pain","aches in joints","joint aches","arthralgia","knee pain","shoulder pain"]},
+
+    {"code":"URINATION_PAIN","label":"Painful urination","category":"GU","weight":2.0,"redFlag":false,
+      "aliases":["painful urination","burning pee","burning when peeing","pain when urinating","dysuria"]},
+
+    {"code":"URGENCY_URINATION","label":"Urinary urgency","category":"GU","weight":1.8,"redFlag":false,
+      "aliases":["urinary urgency","need to pee often","frequent urination","peeing a lot","urgent to pee"]},
+
+    {"code":"BLOOD_IN_URINE","label":"Blood in urine","category":"GU","weight":4.5,"redFlag":true,
+      "aliases":["blood in urine","bloody urine","pink urine","red urine","hematuria"]},
+
+    {"code":"PELVIC_PAIN","label":"Pelvic pain","category":"GU","weight":2.2,"redFlag":false,
+      "aliases":["pelvic pain","lower abdominal pain","pelvic cramps"]},
+
+    {"code":"PREGNANCY_BLEEDING","label":"Bleeding during pregnancy","category":"OB","weight":5.0,"redFlag":true,
+      "aliases":["bleeding during pregnancy","pregnant and bleeding","bleeding while pregnant"]},
+
+    {"code":"NOSEBLEED","label":"Nosebleed","category":"INJURY","weight":2.4,"redFlag":false,
+      "aliases":["nosebleed","nose bleed","bleeding from nose","blood from nose","nose is bleeding"]},
+
+    {"code":"SEVERE_BLEEDING","label":"Severe bleeding","category":"INJURY","weight":5.0,"redFlag":true,
+      "aliases":["severe bleeding","won't stop bleeding","bleeding a lot","heavy bleeding","blood loss"]},
+
+    {"code":"BURN","label":"Burn","category":"INJURY","weight":2.6,"redFlag":false,
+      "aliases":["burn","burned skin","scald","burn injury"]},
+
+    {"code":"BROKEN_BONE","label":"Possible broken bone","category":"INJURY","weight":4.2,"redFlag":true,
+      "aliases":["broken bone","fracture","bone sticking out","cant move limb"]},
+
+    {"code":"SWELLING","label":"Swelling","category":"INJURY","weight":1.4,"redFlag":false,
+      "aliases":["swelling","swollen","puffy","inflamed","swollen area"]}
   ]
 }

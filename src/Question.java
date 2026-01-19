@@ -1,9 +1,9 @@
 import java.util.*;
 
 public class Question {
-    String id;
-    String prompt;
-    List<String> options;
+    final String id;
+    final String prompt;
+    final List<String> options;
 
     public Question(String id, String prompt, List<String> options) {
         this.id = id;
