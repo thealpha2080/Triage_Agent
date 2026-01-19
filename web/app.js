@@ -2,6 +2,7 @@
 const chat = document.getElementById("chat");
 const msgInput = document.getElementById("msgInput");
 const sendBtn = document.getElementById("sendBtn");
+const themeToggle = document.getElementById("themeToggle");
 
 // Tabs / views
 const tabButtons = document.querySelectorAll(".tab");
@@ -20,6 +21,32 @@ function setActiveView(viewId) {
 tabButtons.forEach(btn => {
   btn.addEventListener("click", () => setActiveView(btn.dataset.view));
 });
+
+// ---------- Theme ----------
+const themeKey = "triage-theme";
+
+function applyTheme(mode) {
+  const normalized = mode === "light" ? "light" : "dark";
+  document.body.dataset.theme = normalized;
+  if (themeToggle) {
+    const isLight = normalized === "light";
+    themeToggle.setAttribute("aria-pressed", String(isLight));
+    themeToggle.textContent = `Theme: ${isLight ? "Light" : "Dark"}`;
+  }
+  localStorage.setItem(themeKey, normalized);
+}
+
+function toggleTheme() {
+  const current = document.body.dataset.theme || "dark";
+  applyTheme(current === "dark" ? "light" : "dark");
+}
+
+const savedTheme = localStorage.getItem(themeKey);
+applyTheme(savedTheme || "dark");
+
+if (themeToggle) {
+  themeToggle.addEventListener("click", toggleTheme);
+}
 
 // ---------- Chat rendering ----------
 function addBubble(text, who) {
