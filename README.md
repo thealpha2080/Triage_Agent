@@ -56,3 +56,44 @@ The bot can also be considered as a health tracker to provide a summary of the u
 
 **Phase 4:**
 - Add stronger storage options (like a database) so history is reliable and fast.
+
+---
+
+## User Guide
+
+### What this program does
+Triage Agent is a local-only chatbot that collects symptoms, asks clarifying questions, and then provides a non-medical triage recommendation (self-care, doctor visit, or ER). It is a demo tool, not a diagnosis engine.
+
+### How to run (local)
+1. Compile the Java sources:
+   - `javac -d out src/*.java`
+2. Start the server:
+   - `java -cp out Server`
+3. Open a browser to:
+   - `http://localhost:8000/`
+4. Use the chat tab to enter symptoms. Use the theme toggle in the top-right to switch light/dark.
+
+### Screenshots
+The UI screenshot is intended to show the light/dark toggle and chat layout.
+If your environment cannot run a browser (headless crash), capture it manually once the server is running at `http://localhost:8000/`.
+
+---
+
+## Excluded Features (so far)
+- History view with search/filter (still marked as “Coming soon”).
+- Rich triage explanations (short reasoning card) beyond the current text summary.
+- Persistent DB storage beyond JSON case files.
+
+---
+
+## Known Bugs / Limitations
+- The symptom engine is keyword-based and can miss phrasing outside the alias list.
+- Triage recommendations are blocked until duration + severity are captured.
+- No automated test harness is included in this repo snapshot.
+
+---
+
+## Next Steps (with two more weeks)
+- Add a red-flag fast path to escalate before the full slot-filling flow.
+- Expand symptom alias coverage for urgent phrases (e.g., bleeding, neuro deficits).
+- Build the “history” view with search and triage filtering.
