@@ -1,45 +1,50 @@
-import java.util.*;
-
 /**
  * Title: ConversationEngine
  * Author: Ali Abbas
- * Description: Phase 1 chat UX with slot collection and deterministic replies.
+ * Description: Chat UX with info collection and deterministic replies.
  *              Adds triage scoring with red-flag overrides and summary output.
  * Date: Jan 19, 2026
  * Version: 1.5.0
  */
+
+import java.util.*;
 public class ConversationEngine {
 
+    // brute, manually made freindly chat promps for user experience
+    // ACK = acknowledgement
     private static final List<String> ACKS = List.of(
             "Got it — I can help you sort this out.",
             "Okay. Let’s walk through it step by step.",
             "Thanks. I’ll keep it simple and ask one thing at a time."
     );
+    // Tokens that often indicate the user is describing time context
     private static final Set<String> DURATION_CONTEXT = Set.of(
             "for", "since", "past", "last", "lasting", "started", "been"
     );
+    // Tokens that often indicate the user is correcting themselves
     private static final Set<String> CORRECTION_TOKENS = Set.of(
             "actually", "just", "only"
     );
 
+    // Active sessions map: sessionId -> ConversationState
     private final Map<String, ConversationState> sessions;
+    // Unique id for this server run. If it changes, we force a new Case even if sessionId stayed the same.
     private final String bootId;
+    // Symptom alias/codes + symptom metadata used for extraction + scoring.
     private final KnowledgeBase kb;
+    // Persistence layer to store cases across requests (optional; can be null).
     private final CaseRepository repository;
 
-    /**
-     * Helper structure to keep both a user-friendly duration label and a numeric value in minutes.
-     * This lets us display the text they typed while still scoring consistently.
-     */
+    // Small helper object: store both a display label and a numeric value (minutes) for duration.
     private static class DurationParseResult {
         String label;
         double minutes;
         DurationParseResult(String label, double minutes) {
-            this.label = label;
-            this.minutes = minutes;
+            this.label = label; // label for display
+            this.minutes = minutes; // normalized numeric duration used in scoring / thresholds
         }
     }
-
+    // constructor
     public ConversationEngine(Map<String, ConversationState> sessions, String bootId, KnowledgeBase kb, CaseRepository repository) {
         this.sessions = sessions;
         this.bootId = bootId;
@@ -47,6 +52,7 @@ public class ConversationEngine {
         this.repository = repository;
     }
 
+    // UI-level responses
     public static class BotResponse {
         String text;
         List<String> options; // quick replies for severity/duration
@@ -54,7 +60,17 @@ public class ConversationEngine {
         BotResponse(String text, List<String> options) { this.text = text; this.options = options; }
     }
 
+    /**
+     * handle: main entry point for each user message
+     * - Creates / retrieves session state
+     * - Starts a new Case when needed (new boot run or missing active case)
+     * - Records user messages into notes
+     * - Extracts symptom candidates
+     * - Builds the next bot reply
+     * - Persists + returns JSON for the frontend
+     **/
     public String handle(String sessionId, String text) {
+        // Get the session state for this sessionId, creating one if it doesn't exist
         ConversationState st = sessions.computeIfAbsent(sessionId, ConversationState::new);
 
         // New server run => new case, even if browser keeps same sessionId
@@ -69,32 +85,44 @@ public class ConversationEngine {
 
         Case c = st.activeCase;
 
+        // Normalize user input
         text = (text == null) ? "" : text.trim();
+        // If user sends nothing, prompt them with guidance on what to type.
         if (text.isEmpty()) {
             return respond(new BotResponse(
                     "Type what’s going on (you can list symptoms like: “fever, cough, sore throat”)."
             ), c, sessionId);
         }
-
+        // If case is locked, do not keep collecting: return final triage summary immediately.
         if (c.locked) {
             // When a case is locked, immediately return the existing summary so the user
             // understands the final recommendation without confusion.
             return respond(new BotResponse(triageSummary(c)), c, sessionId);
         }
 
-        // Always record the raw message
-        c.notes.add(text);
-        extractAndStoreCandidates(c, text);
+
+        c.notes.add(text); // Records the raw message
+        extractAndStoreCandidates(c, text); // Extract symptom candidates and update candidateConfidenceByCode.
 
         BotResponse reply = buildReply(c, text);
         return respond(reply, c, sessionId);
-    }
+    } // End handle method
 
     // ------------------------------------------------------------
     // Conversation flow
 
+    /**
+     * - Central conversation router
+     * - Decides whether the program is: opening, clarifying, collecting info, collecting more, or ready
+     * - Updates mode and counters on the Case
+     * - Returns a BotResponse
+     * @param c
+     * @param text
+     */
     private BotResponse buildReply(Case c, String text) {
-        String norm = normalize(text);
+        String norm = normalize(text);  // normalized string of the user's comment
+
+        // Scan for information
         DurationParseResult durationAttempt = parseDuration(norm);
         String severityAttempt = extractSeverity(norm);
         boolean respondingToDuration = "ask_duration".equals(c.lastBotKey) && durationAttempt != null;
@@ -111,7 +139,7 @@ public class ConversationEngine {
             c.unclearCount = 0;
             String ack = pickAck(c.caseId);
 
-            // If they greeted us, greet back but push toward symptoms
+            // If they greeted, greet back but push toward symptoms
             if (greeting) {
                 return new BotResponse(nextNonRepeating(c, "greet_pushy",
                         "Hi again! I’m here to help, but I need symptoms to guide you. Describe what you’re feeling (for example: “chest tightness for 90 minutes, moderate”)."));
@@ -123,13 +151,13 @@ public class ConversationEngine {
                         ack + " I didn’t fully understand. Tell me a few symptoms or what feels worst right now."));
             }
 
-            c.mode = Case.Mode.GATHER_SLOTS;
+            c.mode = Case.Mode.GATHER_INFO;
 
-            // Try to pull slots immediately if they included them
-            fillSlotsFromText(c, norm);
+            // Try to pull severity/duration immediately if they included them
+            fillInfoFromText(c, norm);
 
             // Ask only what’s missing
-            return askNextMissingSlotOrCollect(c, ack);
+            return askNextMissingOrCollect(c, ack);
         }
 
         // 2) If unclear, run the clarifying logic path
@@ -153,20 +181,20 @@ public class ConversationEngine {
 
         // 3) If clarifying worked, move forth
         if (c.mode == Case.Mode.CLARIFYING) {
-            c.mode = Case.Mode.GATHER_SLOTS;
+            c.mode = Case.Mode.GATHER_INFO;
             c.unclearCount = 0; // reset once we get a clear message
         }
 
-        // 4) Always attempt to fill slots from any clear message
-        fillSlotsFromText(c, norm);
+        // 4) Always attempt to fill info from any clear message
+        fillInfoFromText(c, norm);
 
-        // 5) If slots still missing, ask one at a time
+        // 5) If severity/duration are still missing, ask one at a time
         if (c.duration.isEmpty() || c.severity.isEmpty()) {
-            c.mode = Case.Mode.GATHER_SLOTS;
-            return askNextMissingSlotOrCollect(c, "");
+            c.mode = Case.Mode.GATHER_INFO;
+            return askNextMissingOrCollect(c, "");
         }
 
-        // 6) Slots present => collect more symptoms until user indicates done
+        // 6) Collect more symptoms until user indicates done or dangerous symptoms are detected
         c.mode = Case.Mode.COLLECT_MORE;
 
         // If enough info is gathered, lock in a triage decision
@@ -175,20 +203,25 @@ public class ConversationEngine {
             return triageNow;
         }
 
+        // If there are no more symptoms being listed,
+        // show a small internal summary of what info was collected
         if (userSeemsDone(norm)) {
             c.mode = Case.Mode.READY;
             return new BotResponse("Alright. Here’s what I have so far:\n"
                     + "- Duration: " + c.duration + "\n"
                     + "- Severity: " + c.severity + "\n"
-                    + "- Notes count: " + c.notes.size() + "\n\n"
-                    + "Next phase will detect symptoms from the notes. If you want, add one more detail (age group, fever temperature, or meds taken).");
+                    + "- Notes count: " + c.notes.size() + "\n\n");
         }
+        // Prompt furthur
         return new BotResponse(nextNonRepeating(c, "collect_more",
                 "Got it. Anything else you’re noticing?"));
     }  // End of buildReply method
 
-
-    private BotResponse askNextMissingSlotOrCollect(Case c, String prefixAck) {
+    /**
+     * Ask for severity/duration based on wether or not they're missing
+     * Else prompt user to list more symptoms
+     */
+    private BotResponse askNextMissingOrCollect(Case c, String prefixAck) {
         if (c.duration.isEmpty()) {
             // Ask for duration with flexible units so cases like “90 minutes” are covered
             return new BotResponse(nextNonRepeating(c, "ask_duration",
@@ -204,17 +237,28 @@ public class ConversationEngine {
                     List.of("mild", "moderate", "severe"));
         }
 
+        // Collect more details once severtiy/duration are filled
         return new BotResponse(nextNonRepeating(c, "collect_more",
                 (prefixAck.isEmpty() ? "" : prefixAck + " ")
                         + "Got it. List any other symptoms you’re noticing (even if they seem minor)."));
     }
 
-    private void fillSlotsFromText(Case c, String norm) {
+    /**
+     * Try to extract severity/duration
+     * only if needed.
+     * Updates info to the case final summary
+     */
+
+    private void fillInfoFromText(Case c, String norm) {
         DurationParseResult parsed = parseDuration(norm);
+
+        // Only overwrite duration if it makes sense in context
         if (parsed != null && shouldUpdateDuration(c, parsed, norm)) {
             c.duration = parsed.label;
             c.durationMinutes = parsed.minutes;
         }
+
+        // Check keywords then overwrite
         String severity = extractSeverity(norm);
         if (!severity.isEmpty() && shouldUpdateSeverity(c, norm)) {
             c.severity = severity;
@@ -222,7 +266,7 @@ public class ConversationEngine {
     }
 
     // ------------------------------------------------------------
-    // Slot extraction
+    // info extraction
 
     private String extractSeverity(String norm) {
         if (norm.contains("mild")) return "mild";
@@ -237,7 +281,7 @@ public class ConversationEngine {
      * a numeric value (in minutes) and also keeps a friendly label for display.
      */
     private DurationParseResult parseDuration(String norm) {
-        // Shortcut phrases that lack numbers but imply short durations
+        // Ambiguous phrases that lack numbers but imply short durations
         if (norm.contains("few minutes")) {
             return new DurationParseResult("few minutes (~10)", 10);
         }
@@ -263,7 +307,7 @@ public class ConversationEngine {
             return new DurationParseResult("90 minutes", 90);
         }
 
-        // General numeric extraction: looks for "<number> <unit>"
+        // General number extraction
         String[] tokens = norm.split(" ");
         for (int i = 0; i < tokens.length; i++) {
             Double value = tryParseDouble(tokens[i]);
@@ -557,6 +601,11 @@ public class ConversationEngine {
     // ------------------------------------------------------------
     // JSON builder
 
+    /**
+     * generate the java respone into JSON so that app.js can read it.
+     * @param resp
+     * @param c
+     */
     private String responseJson(BotResponse resp, Case c) {
         StringBuilder sb = new StringBuilder();
         sb.append("{");
@@ -598,7 +647,7 @@ public class ConversationEngine {
 
         sb.append("}");
         return sb.toString();
-    }
+    } // End responseJson method
 
     private String respond(BotResponse resp, Case c, String sessionId) {
         persistCase(c, sessionId);
@@ -626,6 +675,11 @@ public class ConversationEngine {
     // ------------------------------------------------------------
     // Triage logic
 
+    /**
+     * recalibrate the confidence levels each message transaction
+     * @param c
+     * @param norm
+     */
     private BotResponse maybeTriage(Case c, String norm) {
         if (c.triageComplete) return new BotResponse(triageSummary(c));
         if (c.candidateConfidenceByCode.isEmpty()) return null;
@@ -683,7 +737,7 @@ public class ConversationEngine {
 
         String level;
         double confScore;
-
+        // decision:
         if (!redFlags.isEmpty()) {
             level = "911";
             confScore = 0.92;
@@ -719,8 +773,13 @@ public class ConversationEngine {
         c.triageRedFlags.addAll(redFlags);
 
         return new BotResponse(triageSummary(c));
-    }
+    } // End maybeTriage method
 
+    /**
+     * Outputs the final triage result
+     * @param c
+     * @return sb.toString();
+     */
     private String triageSummary(Case c) {
         StringBuilder sb = new StringBuilder();
         sb.append("Triage result: ").append(c.triageLevel.isEmpty() ? "Pending" : c.triageLevel);
@@ -735,5 +794,5 @@ public class ConversationEngine {
         }
         sb.append("\nCase locked. Start a new session to begin another triage.");
         return sb.toString();
-    }
-}
+    }// End triageSummary method
+} // End ConversationEngine Class

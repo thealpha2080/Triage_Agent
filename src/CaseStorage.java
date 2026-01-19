@@ -59,7 +59,7 @@ public class CaseStorage {
         }
         sb.append("],");
 
-        // Red-flag list
+        // Emergency symptoms are 'red flags' that vastly add to the triage results.
         sb.append("\"triageRedFlags\":[");
         for (int i = 0; i < c.triageRedFlags.size(); i++) {
             if (i > 0) sb.append(",");

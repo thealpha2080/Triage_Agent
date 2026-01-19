@@ -4,12 +4,43 @@
 // Date: Sep 28, 2025
 // Version: 1.1.0
 
-// ---------- DOM ----------
 const chat = document.getElementById("chat");
 const msgInput = document.getElementById("msgInput");
 const sendBtn = document.getElementById("sendBtn");
 const caseRows = document.getElementById("caseRows");
 const caseEmpty = document.getElementById("caseEmpty");
+<script>
+(function(){
+  const root = document.documentElement; // <html>
+  const btn = document.getElementById("themeToggle");
+  const STORAGE_KEY = "theme"; // "light" | "dark"
+
+  function applyTheme(theme){
+    if(theme === "dark") root.setAttribute("data-theme", "dark");
+    else root.removeAttribute("data-theme");
+
+    // Button label
+    if(btn){
+      btn.textContent = (theme === "dark") ? "☀️ Light" : "🌙 Dark";
+    }
+  }
+
+  // Load saved theme OR default to system preference
+  const saved = localStorage.getItem(STORAGE_KEY);
+  const systemPrefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+  const initialTheme = saved || (systemPrefersDark ? "dark" : "light");
+  applyTheme(initialTheme);
+
+  // Toggle on click
+  btn?.addEventListener("click", () => {
+    const isDark = root.getAttribute("data-theme") === "dark";
+    const next = isDark ? "light" : "dark";
+    localStorage.setItem(STORAGE_KEY, next);
+    applyTheme(next);
+  });
+})();
+</script>
+
 
 // Tabs / views
 const tabButtons = document.querySelectorAll(".tab");

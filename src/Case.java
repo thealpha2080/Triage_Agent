@@ -1,5 +1,3 @@
-import java.util.*;
-
 /**
  * Title: Case
  * Author: Ali Abbas
@@ -8,6 +6,8 @@ import java.util.*;
  * Date: Jan 19, 2026
  * Version: 1.3.0
  */
+
+import java.util.*;
 public class Case {
 
     public enum Mode {
@@ -15,7 +15,7 @@ public class Case {
         CLARIFYING,     // user message unclear
         GATHER_SLOTS,   // we still need duration/severity
         COLLECT_MORE,   // keep collecting symptoms
-        READY           // minimum info gathered (Phase 2+ will use this)
+        GATHER_INFO, READY           // minimum info gathered (Phase 2+ will use this)
     }
 
     public final String caseId = UUID.randomUUID().toString();
@@ -35,7 +35,7 @@ public class Case {
 
     public boolean locked = false; // Prevent updates after triage is finalized.
 
-    // Phase 1 slots (later used in triage math)
+    // Triage info
     public String duration = "";         // e.g., "90 minutes", "3 days", "1-2 weeks"
     public double durationMinutes = -1;   // normalized numeric duration in minutes for ranking
     public String severity = "";         // e.g., "mild", "moderate", "severe"

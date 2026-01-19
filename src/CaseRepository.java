@@ -6,9 +6,8 @@
  * Version: 1.0.0
  */
 public interface CaseRepository {
-    // Persist a case to the active storage backend.
     void saveCase(Case c, String sessionId);
 
-    // Return lightweight summaries for recent cases (used by the Database tab).
+    // Return lightweight summaries for recent cases (used in Database tab)
     java.util.List<CaseSummary> listCases(int limit);
-}
+} // End CaseRepository

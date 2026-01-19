@@ -17,6 +17,7 @@ public class CaseSummary {
     public final int notesCount;
     public final int redFlagCount;
 
+    // Constructor
     public CaseSummary(String caseId,
                        String sessionId,
                        long startedEpochMs,
