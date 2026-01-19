@@ -67,9 +67,9 @@
 }
 
 /* =========================
-   Dark Mode Overrides
-   Triggered by: <html data-theme="dark">
-   ========================= */
+   Dark Mode Overrides     */
+
+
 html[data-theme="dark"]{
   --bg-page:#0b1118;
   --bg-app:#0e141b;
