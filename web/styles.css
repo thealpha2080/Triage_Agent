@@ -1,5 +1,5 @@
 :root{
-  /* Theme (default: dark) */
+  /* Theme */
   --bg-page:#0b0f14;              /* outside/sides */
   --bg-app:#0e141b;               /* main container */
   --bg-chat:#0b1118;              /* chat zone */
@@ -28,33 +28,6 @@
   /* Fonts */
   --font-ui: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
   --font-title: "Times New Roman", Times, serif;
-}
-
-/* Light theme overrides */
-body[data-theme="light"]{
-  --bg-page:#eef2f7;
-  --bg-app:#f9fbff;
-  --bg-chat:#f4f7fb;
-  --bg-panel:#ffffff;
-
-  --text:#1a2433;
-  --muted:rgba(26,36,51,0.70);
-
-  --blue:#1c7dd6;
-  --gold:#c79a1f;
-
-  --border2:rgba(26,36,51,0.10);
-
-  --bubble-bot:#ffffff;
-  --bubble-bot-border:rgba(26,36,51,0.10);
-
-  --bubble-user:rgba(28,125,214,0.12);
-  --bubble-user-border:rgba(28,125,214,0.30);
-
-  --composer-bg:rgba(26,36,51,0.04);
-  --input-bg:#ffffff;
-
-  --shadow: 0 12px 26px rgba(26,36,51,0.15);
 }
 
 *{ box-sizing:border-box; }
@@ -131,29 +104,6 @@ body{
   display:flex;
   gap:10px;
   align-items:center;
-}
-
-/* Theme toggle button */
-.topbarActions{
-  display:flex;
-  align-items:center;
-  gap:12px;
-}
-
-.themeToggle{
-  border:1px solid var(--border2);
-  background: rgba(255,255,255,0.03);
-  color: var(--text);
-  padding: 8px 12px;
-  border-radius: 12px;
-  cursor:pointer;
-  font-weight:650;
-  letter-spacing:0.2px;
-  font-family: var(--font-title);
-}
-
-.themeToggle:hover{
-  border-color: rgba(42,168,255,0.30);
 }
 
 .tab{

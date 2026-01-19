@@ -40,13 +40,6 @@ public class ConversationEngine {
         this.kb = kb;
     }
 
-    /**
-     * Main entry point for each inbound chat message.
-     * It creates or resumes a case, stores the raw note, and returns a bot JSON response.
-     * @param sessionId unique browser session identifier (stored in localStorage)
-     * @param text user message as entered in the chat UI
-     * @return JSON payload containing a bot response bubble
-     */
     public String handle(String sessionId, String text) {
         ConversationState st = sessions.computeIfAbsent(sessionId, ConversationState::new);
 
