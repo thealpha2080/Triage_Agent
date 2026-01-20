@@ -7,20 +7,20 @@
 :root{
 
   /* Surfaces */
-  --bg-page:#eef5f7;               /* light clinic background */
-  --bg-app:#f7fbfc;                /* main container */
-  --bg-chat:#f3f8fa;               /* chat zone */
-  --bg-panel:#ffffff;              /* panels */
+  --bg-page:#eef5f7;
+  --bg-app:#f7fbfc;
+  --bg-chat:#f3f8fa;
+  --bg-panel:#ffffff;
 
   /* Text */
-  --text:#0f2430;                  /* deep navy-teal */
+  --text:#0f2430;
   --muted:rgba(15,36,48,0.62);
 
-  /* Accents (medical) */
-  --blue:#1f8ee6;                  /* clinical blue */
-  --teal:#20b7b0;                  /* calm teal */
-  --green:#2bb673;                 /* “vitals stable” green */
-  --red:#e34b4b;                   /* alert red (optional) */
+  /* Accents*/
+  --blue:#1f8ee6;
+  --teal:#20b7b0;
+  --green:#2bb673;
+  --red:#e34b4b;
 
   /* Lines / borders */
   --border2:rgba(15,36,48,0.10);
@@ -48,7 +48,6 @@
 
   /* Fonts */
   --font-ui: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
-  /* Swap out the serif title for a modern “hospital signage” vibe */
   --font-title: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
 }
 
@@ -118,7 +117,6 @@ html[data-theme="dark"] .tab.active{
   background: linear-gradient(180deg, rgba(32,183,176,0.22), rgba(15,23,34,0.85));
 }
 
-/* Make the page background switch too (since body sets a gradient) */
 html[data-theme="dark"] body{
   background:
     radial-gradient(1200px 700px at 25% -10%, rgba(32,183,176,0.12), transparent 55%),
@@ -136,7 +134,6 @@ body{
   font-family: var(--font-ui);
   color:var(--text);
 
-  /* Subtle “sterile” gradients (no gold; clean clinical light) */
   background:
     radial-gradient(1200px 700px at 25% -10%, rgba(32,183,176,0.18), transparent 55%),
     radial-gradient(900px 650px at 95% 0%, rgba(31,142,230,0.18), transparent 55%),
@@ -173,12 +170,10 @@ body{
   gap:16px;
   position:relative;
 
-  /* “Frosted clinic glass” */
   background: rgba(255,255,255,0.78);
   backdrop-filter: blur(10px);
 }
 
-/* Replace gold trim with “ECG pulse” teal-blue line */
 .topbar::after{
   content:"";
   position:absolute;
