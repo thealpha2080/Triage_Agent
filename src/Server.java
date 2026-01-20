@@ -32,7 +32,7 @@ public class Server {
     static final String BOOT_ID = UUID.randomUUID().toString();
     static final Map<String, ConversationState> SESSIONS = new ConcurrentHashMap<>();
 
-    static final KnowledgeBase KB = loadKbOrDie();
+    static final KnowledgeBase KB = loadKb();
     private static final CaseRepository CASE_REPOSITORY = initRepository();
     private static final ConversationEngine ENGINE = new ConversationEngine(SESSIONS, BOOT_ID, KB, CASE_REPOSITORY);
 
@@ -294,7 +294,7 @@ public class Server {
     } // End escapeJson
 
     // Load the knowledge base or stop the server with a fatal message.
-    private static KnowledgeBase loadKbOrDie() {
+    private static KnowledgeBase loadKb() {
         try {
             return KnowledgeBase.load(KB_PATH);
         } catch (Exception e) {
@@ -304,7 +304,7 @@ public class Server {
             System.exit(1);
             return null; // unreachable, but required by Java
         }
-    } // End loadKbOrDie
+    } // End loadKb
 
     // Read an entire request body into a UTF-8 string.
     private static String readAll(InputStream in) throws IOException {

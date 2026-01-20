@@ -6,23 +6,14 @@
   <component name="ChangeListManager">
     <list default="true" id="3867ec87-47ca-4a24-a134-75b0b767d7e6" name="Changes" comment="Merge remote-tracking branch 'origin/master'">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/out/production/Triage_Agent/Case$Mode.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Triage_Agent/Case$Mode.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/out/production/Triage_Agent/JsonCaseRepository.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Triage_Agent/JsonCaseRepository.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/out/production/Triage_Agent/KnowledgeBase.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Triage_Agent/KnowledgeBase.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/out/production/Triage_Agent/Question.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/out/production/Triage_Agent/ConversationEngine$FuzzyHit.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Triage_Agent/ConversationEngine$FuzzyHit.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/out/production/Triage_Agent/ConversationEngine.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Triage_Agent/ConversationEngine.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/out/production/Triage_Agent/ConversationState.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Triage_Agent/ConversationState.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/out/production/Triage_Agent/Server$JsonMini.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Triage_Agent/Server$JsonMini.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/out/production/Triage_Agent/Server.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Triage_Agent/Server.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/Case.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/Case.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/ConversationEngine.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/ConversationEngine.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/ConversationState.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/ConversationState.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/JsonCaseRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/JsonCaseRepository.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/KnowledgeBase.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/KnowledgeBase.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/Question.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/out/production/Triage_Agent/SqliteCaseRepository.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Triage_Agent/SqliteCaseRepository.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/out/production/Triage_Agent/Symptom.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Triage_Agent/Symptom.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/Server.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/Server.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/SqliteCaseRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/SqliteCaseRepository.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/Symptom.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/Symptom.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/app.js" beforeDir="false" afterPath="$PROJECT_DIR$/web/app.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/web/index.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/styles.css" beforeDir="false" afterPath="$PROJECT_DIR$/web/styles.css" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -128,7 +119,23 @@
       <option name="project" value="LOCAL" />
       <updated>1768789998249</updated>
     </task>
-    <option name="localTasksCounter" value="6" />
+    <task id="LOCAL-00006" summary="Merge remote-tracking branch 'origin/master'">
+      <option name="closed" value="true" />
+      <created>1768868078174</created>
+      <option name="number" value="00006" />
+      <option name="presentableId" value="LOCAL-00006" />
+      <option name="project" value="LOCAL" />
+      <updated>1768868078174</updated>
+    </task>
+    <task id="LOCAL-00007" summary="Merge remote-tracking branch 'origin/master'">
+      <option name="closed" value="true" />
+      <created>1768868368217</created>
+      <option name="number" value="00007" />
+      <option name="presentableId" value="LOCAL-00007" />
+      <option name="project" value="LOCAL" />
+      <updated>1768868368217</updated>
+    </task>
+    <option name="localTasksCounter" value="8" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
