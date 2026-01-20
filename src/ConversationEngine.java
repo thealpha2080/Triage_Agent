@@ -241,14 +241,13 @@ public class ConversationEngine {
         return new BotResponse(nextNonRepeating(c, "collect_more",
                 (prefixAck.isEmpty() ? "" : prefixAck + " ")
                         + "Got it. List any other symptoms you’re noticing (even if they seem minor)."));
-    }
+    } // End askNextMissingOrCollect
 
     /**
      * Try to extract severity/duration
      * only if needed.
      * Updates info to the case final summary
      */
-
     private void fillInfoFromText(Case c, String norm) {
         DurationParseResult parsed = parseDuration(norm);
 
@@ -263,7 +262,7 @@ public class ConversationEngine {
         if (!severity.isEmpty() && shouldUpdateSeverity(c, norm)) {
             c.severity = severity;
         }
-    }
+    } // End fillInfoFromText
 
     // ------------------------------------------------------------
     // info extraction
@@ -274,7 +273,7 @@ public class ConversationEngine {
         if (norm.contains("severe")) return "severe";
         if (norm.contains("really bad")) return "severe";
         return "";
-    }
+    } // End extractSeverity
 
     /**
      * Duration can be provided in minutes, hours, days, or weeks. The method extracts
@@ -335,8 +334,9 @@ public class ConversationEngine {
         }
 
         return null;
-    }
+    } // End parseDuration
 
+    // Convert a token into a numeric value when possible.
     private Double tryParseDouble(String token) {
         if ("a".equals(token) || "an".equals(token) || "one".equals(token)) return 1.0;
         if ("two".equals(token) || "couple".equals(token)) return 2.0;
@@ -349,8 +349,9 @@ public class ConversationEngine {
         } catch (NumberFormatException e) {
             return null;
         }
-    }
+    } // End tryParseDouble
 
+    // Format a friendly duration label based on a value and unit.
     private String formatDurationLabel(double value, String unit) {
         boolean whole = Math.abs(value - Math.round(value)) < 0.0001;
         String numberText = whole
@@ -361,6 +362,7 @@ public class ConversationEngine {
         return numberText + " " + unitText;
     }
 
+    // Decide whether to update the stored duration based on context.
     private boolean shouldUpdateDuration(Case c, DurationParseResult parsed, String norm) {
         boolean askedDuration = "ask_duration".equals(c.lastBotKey);
         boolean hasContext = containsAnyToken(norm, DURATION_CONTEXT);
@@ -376,14 +378,16 @@ public class ConversationEngine {
         if (!hasContext) return false;
         if (c.durationMinutes <= 0) return true;
         return parsed.minutes >= c.durationMinutes;
-    }
+    } // End shouldUpdateDuration
 
+    // Decide whether to update the stored severity based on context.
     private boolean shouldUpdateSeverity(Case c, String norm) {
         if (c.severity.isEmpty()) return true;
         if ("ask_severity".equals(c.lastBotKey)) return true;
         return containsAnyToken(norm, CORRECTION_TOKENS);
-    }
+    } // End shouldUpdateSeverity
 
+    // Check whether any tokens appear in the normalized text.
     private boolean containsAnyToken(String norm, Set<String> tokens) {
         if (norm.isEmpty()) return false;
         String[] parts = norm.split(" ");
@@ -393,6 +397,7 @@ public class ConversationEngine {
         return false;
     }
 
+    // Compute a multiplier based on how long symptoms have lasted.
     private double computeDurationMultiplier(Case c) {
         double durationMultiplier = 1.0;
 
@@ -417,14 +422,16 @@ public class ConversationEngine {
         else if (d.contains("2+ weeks") || d.contains("2 weeks")) durationMultiplier = 1.60;
 
         return durationMultiplier;
-    }
+    } // End computeDurationMultiplier
 
+    // Compute a multiplier based on severity label.
     private double computeSeverityMultiplier(String severity) {
         if ("moderate".equals(severity)) return 1.30;
         if ("severe".equals(severity)) return 1.70;
         return 1.0;
-    }
+    } // End computeSeverityMultiplier
 
+    // Compute a boost for prolonged duration to increase confidence.
     private double computeDurationBoost(Case c) {
         if (c.durationMinutes <= 0) return 0.0;
         double minutes = c.durationMinutes;
@@ -432,20 +439,23 @@ public class ConversationEngine {
         if (minutes >= 360) return 1.2;
         if (minutes >= 120) return 0.8;
         return 0.0;
-    }
+    } // End computeDurationBoost
 
+    // Compute a boost based on severity wording.
     private double computeSeverityBoost(String severity) {
         if ("severe".equals(severity)) return 1.2;
         if ("moderate".equals(severity)) return 0.5;
         return 0.0;
-    }
+    } // End computeSeverityBoost
 
+    // Determine whether the case duration is prolonged.
     private boolean isProlongedDuration(Case c) {
         if (c.durationMinutes >= 120) return true;
         String d = c.duration == null ? "" : c.duration.toLowerCase(Locale.ROOT);
         return d.contains("day") || d.contains("week") || d.contains("today");
-    }
+    } // End isProlongedDuration
 
+    // Detect user messages that indicate they are finished.
     private boolean userSeemsDone(String norm) {
         return norm.contains("that s it")
                 || norm.contains("thats it")
@@ -455,8 +465,9 @@ public class ConversationEngine {
                 || norm.contains("nothing else")
                 || norm.contains("no more")
                 || norm.equals("done");
-    }
+    } // End userSeemsDone
 
+    // Extract symptom candidates from text and update confidence scores.
     private void extractAndStoreCandidates(Case c, String rawText) {
         String norm = KnowledgeBase.normalize(rawText);
         if (norm.isEmpty()) return;
@@ -489,13 +500,15 @@ public class ConversationEngine {
                 }
             }
         }
-    }
+    }  // End extractAndStoreCandidates
 
+    // Increase the confidence score for a symptom candidate.
     private void bumpCandidate(Case c, String code, double confidence) {
         double prev = c.candidateConfidenceByCode.getOrDefault(code, 0.0);
         if (confidence > prev) c.candidateConfidenceByCode.put(code, confidence);
-    }
+    } // End bumpCandidate
 
+    // Build n-gram phrases up to a maximum word length.
     private List<String> makeNGrams(String norm, int maxWords) {
         String[] w = norm.split(" ");
         List<String> out = new ArrayList<>();
@@ -508,7 +521,7 @@ public class ConversationEngine {
             }
         }
         return out;
-    }
+    } // End makeNGrams
 
     private static class FuzzyHit {
         String alias;
@@ -517,7 +530,7 @@ public class ConversationEngine {
             this.alias = alias;
             this.score = score;
         }
-    }
+    } // End FuzzyHit
 
     private FuzzyHit bestFuzzy(String token, List<String> aliases) {
         FuzzyHit best = null;
@@ -526,15 +539,17 @@ public class ConversationEngine {
             if (best == null || s > best.score) best = new FuzzyHit(a, s);
         }
         return best;
-    }
+    } // End bestFuzzy
 
+    // Compute similarity based on normalized edit distance.
     private double similarity(String a, String b) {
         int d = editDistance(a, b);
         int max = Math.max(a.length(), b.length());
         if (max == 0) return 1.0;
         return 1.0 - ((double) d / max);
-    }
+    } // End similarity
 
+    // Compute Levenshtein edit distance. (number of edits needed to reach a word to another word.
     private int editDistance(String a, String b) {
         int[][] dp = new int[a.length() + 1][b.length() + 1];
         for (int i = 0; i <= a.length(); i++) dp[i][0] = i;
@@ -550,11 +565,12 @@ public class ConversationEngine {
             }
         }
         return dp[a.length()][b.length()];
-    }
+    } // End editDistance
 
     // ------------------------------------------------------------
     // Unclear detection (use normalized string)
 
+    // Decide whether the user's message is too unclear to proceed.
     private boolean isUnclear(String norm) {
         if (norm.isEmpty()) return true;
         if (userSeemsDone(norm)) return false;
@@ -568,15 +584,17 @@ public class ConversationEngine {
             if (p.length() >= 3) realWords++;
         }
         return realWords < 2;
-    }
+    } // End isUnclear
 
+    // Normalize user input for token matching.
     private String normalize(String s) {
         return s.toLowerCase(Locale.ROOT)
                 .replaceAll("[^a-z0-9\\s]", " ")
                 .replaceAll("\\s+", " ")
                 .trim();
-    }
+    } // End normalize
 
+    // Detect whether the user is sending a greeting.
     private boolean isGreeting(String norm) {
         if (norm.isEmpty()) return false;
         Set<String> greetings = Set.of("hi", "hello", "hey", "hola", "greetings", "good morning", "good evening", "good afternoon");
@@ -585,18 +603,20 @@ public class ConversationEngine {
             if (norm.startsWith(g + " ")) return true;
         }
         return false;
-    }
+    } // End isGreeting
 
+    // Return a message only if it differs from the last bot key.
     private String nextNonRepeating(Case c, String key, String msg) {
         if (key.equals(c.lastBotKey)) return msg;
         c.lastBotKey = key;
         return msg;
-    }
+    } // End nextNonRepeating
 
+    // Select an acknowledgement message based on the case id hash.
     private String pickAck(String caseId) {
         int idx = Math.abs(caseId.hashCode()) % ACKS.size();
         return ACKS.get(idx);
-    }
+    } // End pickAck
 
     // ------------------------------------------------------------
     // JSON builder
@@ -649,11 +669,12 @@ public class ConversationEngine {
         return sb.toString();
     } // End responseJson method
 
+    // Persist and format a response for the client.
     private String respond(BotResponse resp, Case c, String sessionId) {
         persistCase(c, sessionId);
         return responseJson(resp, c);
     }
-
+    // Persist case data using the configured repository.
     private void persistCase(Case c, String sessionId) {
         if (repository == null || c == null) {
             return;
@@ -664,13 +685,14 @@ public class ConversationEngine {
         repository.saveCase(c, sessionId);
     }
 
+    // Escape strings for JSON output. (ensures no symbols mess with intended formatting)
     private String escapeJson(String s) {
         if (s == null) return "";
         return s.replace("\\", "\\\\")
                 .replace("\"", "\\\"")
                 .replace("\n", "\\n")
                 .replace("\r", "\\r");
-    }
+    } // End escapeJson
 
     // ------------------------------------------------------------
     // Triage logic

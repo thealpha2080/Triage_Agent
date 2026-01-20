@@ -9,7 +9,8 @@ const msgInput = document.getElementById("msgInput");
 const sendBtn = document.getElementById("sendBtn");
 const caseRows = document.getElementById("caseRows");
 const caseEmpty = document.getElementById("caseEmpty");
-<script>
+
+// Theme toggle setup
 (function(){
   const root = document.documentElement; // <html>
   const btn = document.getElementById("themeToggle");
@@ -21,7 +22,7 @@ const caseEmpty = document.getElementById("caseEmpty");
 
     // Button label
     if(btn){
-      btn.textContent = (theme === "dark") ? "☀️ Light" : "🌙 Dark";
+      btn.textContent = (theme === "dark") ? "☀️" : "🌙";
     }
   }
 
@@ -39,7 +40,6 @@ const caseEmpty = document.getElementById("caseEmpty");
     applyTheme(next);
   });
 })();
-</script>
 
 
 // Tabs / views

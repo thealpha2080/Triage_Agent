@@ -8,11 +8,13 @@
 public class JsonCaseRepository implements CaseRepository {
 
     @Override
+    // Save case data
     public void saveCase(Case c, String sessionId) {
         CaseStorage.saveCase(c, sessionId);
     }
 
     @Override
+    // Load the most recent case summaries from JSON files on disk.
     public java.util.List<CaseSummary> listCases(int limit) {
         java.util.List<CaseSummary> summaries = new java.util.ArrayList<>();
         java.nio.file.Path casesDir = java.nio.file.Path.of("data/cases");
@@ -40,8 +42,9 @@ public class JsonCaseRepository implements CaseRepository {
             return new java.util.ArrayList<>(summaries.subList(0, limit));
         }
         return summaries;
-    }
+    } // End listCases
 
+    // Parse a case summary from a stored JSON document.
     private CaseSummary parseSummary(String json) {
         // Parse a minimal subset of fields needed for the history list UI.
         String caseId = getString(json, "caseId");
@@ -54,8 +57,9 @@ public class JsonCaseRepository implements CaseRepository {
         int notesCount = countArrayItems(json, "notes");
         int redFlagCount = countArrayItems(json, "triageRedFlags");
         return new CaseSummary(caseId, sessionId, startedEpochMs, triageLevel, triageConfidence, duration, severity, notesCount, redFlagCount);
-    }
+    } // End parseSummary
 
+    // Extract a string value by key from a simple JSON object.
     private String getString(String json, String key) {
         String needle = "\"" + key + "\":\"";
         int start = json.indexOf(needle);
@@ -64,8 +68,9 @@ public class JsonCaseRepository implements CaseRepository {
         int end = json.indexOf("\"", valueStart);
         if (end < 0) return "";
         return json.substring(valueStart, end);
-    }
+    } // End getString
 
+    // Extract a long value by key from a simple json object.
     private long getLong(String json, String key) {
         String needle = "\"" + key + "\":";
         int start = json.indexOf(needle);
@@ -73,9 +78,10 @@ public class JsonCaseRepository implements CaseRepository {
         int valueStart = start + needle.length();
         int end = findNumberEnd(json, valueStart);
         if (end < 0) return 0L;
-        return parseLongSafe(json.substring(valueStart, end).trim());
-    }
+        return parseLong(json.substring(valueStart, end).trim());
+    } // End getLong
 
+    // Extract a double value by key from a simple json object.
     private double getDouble(String json, String key) {
         String needle = "\"" + key + "\":";
         int start = json.indexOf(needle);
@@ -83,9 +89,10 @@ public class JsonCaseRepository implements CaseRepository {
         int valueStart = start + needle.length();
         int end = findNumberEnd(json, valueStart);
         if (end < 0) return 0.0;
-        return parseDoubleSafe(json.substring(valueStart, end).trim());
-    }
+        return parseDouble(json.substring(valueStart, end).trim());
+    } // End getDouble
 
+    // Find the end of a numeric token within a json string
     private int findNumberEnd(String json, int start) {
         int i = start;
         while (i < json.length()) {
@@ -97,9 +104,10 @@ public class JsonCaseRepository implements CaseRepository {
             break;
         }
         return i;
-    }
+    } // End findNumberEnd
 
-    private long parseLongSafe(String value) {
+    // parse a long value
+    private long parseLong(String value) {
         try {
             return Long.parseLong(value);
         } catch (NumberFormatException e) {
@@ -107,7 +115,8 @@ public class JsonCaseRepository implements CaseRepository {
         }
     }
 
-    private double parseDoubleSafe(String value) {
+    // parse a double value
+    private double parseDouble(String value) {
         try {
             return Double.parseDouble(value);
         } catch (NumberFormatException e) {
@@ -115,6 +124,7 @@ public class JsonCaseRepository implements CaseRepository {
         }
     }
 
+    // Count string items inside a JSON array for the given key.
     private int countArrayItems(String json, String key) {
         String needle = "\"" + key + "\":[";
         int start = json.indexOf(needle);
@@ -146,5 +156,5 @@ public class JsonCaseRepository implements CaseRepository {
             }
         }
         return count;
-    }
+    } // End countArrayItems
 }

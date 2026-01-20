@@ -36,6 +36,11 @@
   --composer-bg:rgba(255,255,255,0.86);
   --input-bg:#ffffff;
 
+  /* Database rows */
+    --case-row-bg:rgba(255,255,255,0.72);
+    --case-header-bg:rgba(31,142,230,0.08);
+    --case-header-border:rgba(31,142,230,0.14);
+
   /* Shadows + radius */
   --shadow: 0 14px 34px rgba(15,36,48,0.14);
   --shadow-soft: 0 10px 22px rgba(15,36,48,0.10);
@@ -90,8 +95,27 @@ html[data-theme="dark"]{
   --composer-bg:rgba(255,255,255,0.03);
   --input-bg:rgba(255,255,255,0.05);
 
+  --case-row-bg:rgba(15,23,34,0.78);
+  --case-header-bg:rgba(31,142,230,0.18);
+  --case-header-border:rgba(31,142,230,0.32);
+
   --shadow: 0 12px 30px rgba(0,0,0,0.45);
   --shadow-soft: 0 10px 22px rgba(0,0,0,0.35);
+}
+
+/* Header + tabs in dark mode */
+html[data-theme="dark"] .topbar{
+  background: rgba(15,23,34,0.82);
+}
+
+html[data-theme="dark"] .tab,
+html[data-theme="dark"] .theme-toggle{
+  background: rgba(15,23,34,0.70);
+  box-shadow: 0 8px 18px rgba(0,0,0,0.35);
+}
+
+html[data-theme="dark"] .tab.active{
+  background: linear-gradient(180deg, rgba(32,183,176,0.22), rgba(15,23,34,0.85));
 }
 
 /* Make the page background switch too (since body sets a gradient) */
@@ -356,7 +380,7 @@ body{
   gap:12px;
   padding: 10px 12px;
 
-  background: rgba(255,255,255,0.72);
+  background: var(--case-row-bg);
   border: 1px solid var(--border2);
   border-radius: 12px;
   font-size:12px;
@@ -369,8 +393,8 @@ body{
   letter-spacing:0.6px;
   color: var(--muted);
 
-  background: rgba(31,142,230,0.08);
-  border-color: rgba(31,142,230,0.14);
+  background: var(--case-header-bg);
+  border-color: var(--case-header-border);
 }
 
 /* Options and badges */

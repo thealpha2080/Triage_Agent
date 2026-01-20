@@ -36,7 +36,7 @@ public class Server {
     private static final CaseRepository CASE_REPOSITORY = initRepository();
     private static final ConversationEngine ENGINE = new ConversationEngine(SESSIONS, BOOT_ID, KB, CASE_REPOSITORY);
 
-
+    // Start the local HTTP server and register all routes.
     public static void main(String[] args) throws IOException {
         // Bind the local HTTP server.
         // Open the UI in the browser at "http://localhost:8000/".
@@ -69,7 +69,7 @@ public class Server {
 
         System.out.println("Server running at http://localhost:" + PORT);
         System.out.println("Working dir: " + System.getProperty("user.dir"));
-    }
+    } // End main
 
     // =====================================================================================
     // Core helpers
@@ -96,15 +96,15 @@ public class Server {
         try (OutputStream out = exchange.getResponseBody()) {
             out.write(bytes);
         }
-    }
+    } // End send
 
     private static void sendText(HttpExchange exchange, int statusCode, String text) throws IOException {
         send(exchange, statusCode, "text/plain; charset=utf-8", text, s -> s.getBytes(StandardCharsets.UTF_8));
-    }
+    }  // End sendText
 
     private static void sendJson(HttpExchange exchange, int statusCode, String json) throws IOException {
         send(exchange, statusCode, "application/json; charset=utf-8", json, s -> s.getBytes(StandardCharsets.UTF_8));
-    }
+    } // End sendText
 
     private static void sendFile(HttpExchange exchange, int statusCode, String contentType, Path file) throws IOException {
         try {
@@ -114,19 +114,21 @@ public class Server {
             // Always respond even if file missing -> prevents the browser from loading forever
             sendText(exchange, 500, "Failed to read file: " + file + "\n" + e.getMessage());
         }
-    }
+    } // End sendFile
 
     private static String method(HttpExchange exchange) {
         return exchange.getRequestMethod();
-    }
+    } // End method
+
 
     private static String path(HttpExchange exchange) {
         return exchange.getRequestURI().getPath();
-    }
+    }// End path
 
     // ======================================================================================
     // Route handlers
 
+    // Serve the main index page or a 404 for unmatched root paths.
     private static void handleRoot(HttpExchange exchange) throws IOException {
         System.out.println(method(exchange) + " " + path(exchange));
 
@@ -142,7 +144,7 @@ public class Server {
             // Anything else that wasn't matched by other contexts
             sendText(exchange, 404, "Not Found: " + path(exchange));
         }
-    }
+    } // End handleRoot
 
     private static void handleCss(HttpExchange exchange) throws IOException {
         System.out.println(method(exchange) + " " + path(exchange));
@@ -153,7 +155,7 @@ public class Server {
         }
 
         sendFile(exchange, 200, "text/css; charset=utf-8", STYLES_CSS);
-    }
+    } // End handleCss
 
     private static void handleJs(HttpExchange exchange) throws IOException {
         System.out.println(method(exchange) + " " + path(exchange));
@@ -164,8 +166,9 @@ public class Server {
         }
 
         sendFile(exchange, 200, "application/javascript; charset=utf-8", APP_JS);
-    }
+    } // End handleJs
 
+    // Handle favicon requests with a no-content response (Favicons are the little logo on the website's tab)
     private static void handleFavicon(HttpExchange exchange) throws IOException {
         // Respond with "No Content" so browsers stop requesting the favicon.
         if (!"GET".equals(method(exchange))) {
@@ -174,8 +177,9 @@ public class Server {
         }
         exchange.sendResponseHeaders(204, -1); // No body
         exchange.close();
-    }
+    } // End handleFavicon
 
+    // Handle chat message API requests and return bot responses.
     private static void handleApiMessage(HttpExchange exchange) throws IOException {
         String body = readAll(exchange.getRequestBody());
 
@@ -188,8 +192,9 @@ public class Server {
         String json = ENGINE.handle(sessionId, text);
         sendJson(exchange, 200, json);
 
-    }
+    } // End handleApiMessage
 
+    // Handle case listing API requests for the database tab.
     private static void handleApiCases(HttpExchange exchange) throws IOException {
         if (!"GET".equals(method(exchange))) {
             sendText(exchange, 405, "Method Not Allowed");
@@ -197,7 +202,7 @@ public class Server {
         }
         List<CaseSummary> summaries = CASE_REPOSITORY.listCases(50);
         sendJson(exchange, 200, summariesToJson(summaries));
-    }
+    } // End handleApiCases
 
     // ================================================================================================
     // Utilities
@@ -205,6 +210,7 @@ public class Server {
     static class JsonMini {
 
         static String getString(String body, String key) {
+            // Extract a string value by key from a flat JSON string.
             if (body == null) return null;
 
             // Find: "key"
@@ -224,7 +230,7 @@ public class Server {
             if (secondQuote < 0) return null;
 
             return body.substring(firstQuote + 1, secondQuote);
-        }
+        } // End getString
 
         static String getNestedString(String body, String parentKey, String key) {
             if (body == null) return null;
@@ -241,9 +247,10 @@ public class Server {
 
             String sub = body.substring(braceStart, braceEnd + 1);
             return getString(sub, key);
-        }
-    }
+        } // End getNestedString
+    } // End JsonMini
 
+    // Initialize the case repository, preferring SQLite with a JSON fallback.
     private static CaseRepository initRepository() {
         try {
             System.out.println("[Persistence] Initializing SQLite storage at " + DB_PATH);
@@ -252,8 +259,9 @@ public class Server {
             System.out.println("[Persistence] Falling back to JSON storage: " + e.getMessage());
             return new JsonCaseRepository();
         }
-    }
+    } // End initRepository
 
+    // Serialize case summaries into a JSON array for the UI.
     private static String summariesToJson(List<CaseSummary> summaries) {
         StringBuilder sb = new StringBuilder();
         sb.append("[");
@@ -274,16 +282,18 @@ public class Server {
         }
         sb.append("]");
         return sb.toString();
-    }
+    } // End summariesToJson
 
+    // Escape a string for JSON output.
     private static String escapeJson(String s) {
         if (s == null) return "";
         return s.replace("\\", "\\\\")
                 .replace("\"", "\\\"")
                 .replace("\n", "\\n")
                 .replace("\r", "\\r");
-    }
+    } // End escapeJson
 
+    // Load the knowledge base or stop the server with a fatal message.
     private static KnowledgeBase loadKbOrDie() {
         try {
             return KnowledgeBase.load(KB_PATH);
@@ -294,12 +304,12 @@ public class Server {
             System.exit(1);
             return null; // unreachable, but required by Java
         }
-    }
+    } // End loadKbOrDie
 
-
+    // Read an entire request body into a UTF-8 string.
     private static String readAll(InputStream in) throws IOException {
         byte[] bytes = in.readAllBytes();
         return new String(bytes, StandardCharsets.UTF_8);
-    }
+    } // End readAll
 
-}
+} // End Server

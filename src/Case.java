@@ -13,9 +13,9 @@ public class Case {
     public enum Mode {
         OPENING,        // first turn / greeting logic
         CLARIFYING,     // user message unclear
-        GATHER_SLOTS,   // we still need duration/severity
+        GATHER_INFO,   // we still need duration/severity
         COLLECT_MORE,   // keep collecting symptoms
-        GATHER_INFO, READY           // minimum info gathered (Phase 2+ will use this)
+        READY           // minimum info gathered (Phase 2+ will use this)
     }
 
     public final String caseId = UUID.randomUUID().toString();

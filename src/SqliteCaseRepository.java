@@ -12,7 +12,7 @@ import java.util.Map;
 /**
  * Title: SqliteCaseRepository
  * Author: Ali Abbas
- * Description: SQLite-backed repository for durable case storage and listings.
+ * Description: SQLite-backed repository for case storage and display to the frontend.
  * Date: Sep 28, 2025
  * Version: 1.0.0
  */
@@ -20,15 +20,17 @@ public class SqliteCaseRepository implements CaseRepository {
 
     private final String dbUrl;
 
+    // Initialize SQLite db
     public SqliteCaseRepository(Path dbPath) {
         // Ensure the driver is available before any connection attempts.
         ensureDriver();
         this.dbUrl = "jdbc:sqlite:" + dbPath.toString();
         ensureDirectory(dbPath);
-        ensureSchema();
-    }
-
+        ensureSchema(); // ready to run
+    }  // End SqliteCaseRepository
+    
     @Override
+    // Insert or update a case row in SQLite.
     public void saveCase(Case c, String sessionId) {
         if (c == null) {
             return;
@@ -75,9 +77,10 @@ public class SqliteCaseRepository implements CaseRepository {
         } catch (SQLException e) {
             System.out.println("[SqliteCaseRepository] Failed to save case: " + e.getMessage());
         }
-    }
+    } // End saveCase
 
     @Override
+    // Return a list of recent cases for the UI history view.
     public List<CaseSummary> listCases(int limit) {
         List<CaseSummary> summaries = new java.util.ArrayList<>();
         // Query only the fields required for the database list view.
@@ -107,8 +110,9 @@ public class SqliteCaseRepository implements CaseRepository {
             System.out.println("[SqliteCaseRepository] Failed to list cases: " + e.getMessage());
         }
         return summaries;
-    }
+    } // End listCases
 
+    // Ensure the db directory exists before connecting.
     private void ensureDirectory(Path dbPath) {
         try {
             Path parent = dbPath.getParent();
@@ -118,8 +122,9 @@ public class SqliteCaseRepository implements CaseRepository {
         } catch (Exception e) {
             System.out.println("[SqliteCaseRepository] Failed to create data directory: " + e.getMessage());
         }
-    }
+    } // End ensureDirectory
 
+    // Create the cases table if it does not exist.
     private void ensureSchema() {
         String ddl = "CREATE TABLE IF NOT EXISTS cases (" +
                 "case_id TEXT PRIMARY KEY, " +
@@ -144,16 +149,18 @@ public class SqliteCaseRepository implements CaseRepository {
         } catch (SQLException e) {
             throw new IllegalStateException("Failed to initialize schema: " + e.getMessage(), e);
         }
-    }
+    } // End ensureSchema
 
+    // Verify the SQLite JDBC driver is available.
     private void ensureDriver() {
         try {
             Class.forName("org.sqlite.JDBC");
         } catch (ClassNotFoundException e) {
             throw new IllegalStateException("SQLite JDBC driver not found.", e);
         }
-    }
+    } // End ensureDriver
 
+    // Serialize a list of strings as a JSON array.
     private String toJsonArray(List<String> values) {
         StringBuilder sb = new StringBuilder();
         sb.append("[");
@@ -163,8 +170,9 @@ public class SqliteCaseRepository implements CaseRepository {
         }
         sb.append("]");
         return sb.toString();
-    }
+    } // End toJsonArray
 
+    // Serialize a string/double map as a JSON object.
     private String toJsonMap(Map<String, Double> values) {
         StringBuilder sb = new StringBuilder();
         sb.append("{");
@@ -176,8 +184,9 @@ public class SqliteCaseRepository implements CaseRepository {
         }
         sb.append("}");
         return sb.toString();
-    }
+    } // End toJsonMap
 
+    // Count string values in a JSON array represented as text.
     private int countArrayItems(String jsonArray) {
         if (jsonArray == null || jsonArray.isBlank()) {
             return 0;
@@ -203,13 +212,15 @@ public class SqliteCaseRepository implements CaseRepository {
             }
         }
         return count;
-    }
+    } // End countArrayItems
 
+    // Escape strings for JSON storage.
     private String escapeJson(String s) {
         if (s == null) return "";
         return s.replace("\\", "\\\\")
                 .replace("\"", "\\\"")
                 .replace("\n", "\\n")
                 .replace("\r", "\\r");
-    }
-}
+    } // End escapeJson
+
+} // End SqliteCaseRepository class
