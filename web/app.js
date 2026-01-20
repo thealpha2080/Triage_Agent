@@ -20,7 +20,7 @@ const caseEmpty = document.getElementById("caseEmpty");
     if(theme === "dark") root.setAttribute("data-theme", "dark");
     else root.removeAttribute("data-theme");
 
-    // Button label
+    // Button labels
     if(btn){
       btn.textContent = (theme === "dark") ? "☀️" : "🌙";
     }
